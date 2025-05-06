@@ -20,7 +20,8 @@ const b_deno_deploy = Deno.env.get("DENO_DEPLOYMENT_ID") !== undefined;
 
 let a_o_ws_client = []
 
-// const o_kv = await Deno.openKv();
+const o_kv = await Deno.openKv();
+let s_prefix = 'todotracker.deno.dev';
 // let o_config = await f_o_config();
 // console.log({o_config});
 
@@ -88,14 +89,29 @@ let f_handler = async function(o_request){
             }
         );
     }
-    if(o_url.pathname == '/some_endpoint'){
+    if(o_url.pathname == '/read'){
         let o_post_data = o_request.json();
+        
+        let o_list = await o_kv.get([]`${s_prefix}.o_list.${o_post_data.s_id}`);
+        
         return new Response(
             JSON.stringify(
-                {
-                    s: 'some response',
-                    b_success: true
+                o_list
+            ),
+            { 
+                headers: {
+                    'Content-type': "application/json"
                 }
+            }
+        );
+    }
+    if(o_url.pathname == '/write'){
+        let o_post_data = o_request.json();
+        let o_list = await o_kv.set(`${s_prefix}.o_list`, o_post_data);
+        
+        return new Response(
+            JSON.stringify(
+                o_list
             ),
             { 
                 headers: {
@@ -122,7 +138,7 @@ let s_name_host2 = (b_development) ? 'localhost': s_name_host;
 await f_websersocket_serve(
     [
         {
-            n_port: 8080,
+            n_port: 8081,
             b_https: false,
             s_hostname: s_name_host,
             f_v_before_return_response: f_handler
