@@ -163,7 +163,10 @@ f_add_css(
 
 
     }
-        
+    .inputs{
+        position:fixed;
+        bottom:0;
+    }        
     ${s_css_a_o_toast}
     ${
         f_s_css_from_o_variables(
@@ -357,45 +360,52 @@ let o = await f_o_html_from_o_js(
         f_a_o: ()=>{
             return [
                 {
-                    a_s_prop_sync: 'b_show_done',
-                    s_tag: "button", 
-                    f_s_innerText: ()=>{
-                        return (o_state.b_show_done) ? 'hide done': 'show done'
-                    },
-                    onclick: (o_event)=>{
-                        o_state.b_show_done = !o_state.b_show_done;
-                        o_state.o_list.a_o_todoitem = o_state.o_list.a_o_todoitem;
-                    }
-                },
-                {
-                    s_tag: "input", 
-                    type: 'text', 
-                    a_s_prop_sync: ['s_text'],
-                    onkeydown: (o_event)=>{
-                        let s_text = o_event.target.value;
-                        //if key is entered, add todoitem
-                        if(o_event.key == 'Enter'){
-                            if(s_text != ''){
-                                o_state.o_list.a_o_todoitem.push(
-                                    f_o_todoitem(s_text)
-                                );
-                                o_state.s_text = '';
-                                f_update_o_list();
-                            }
-                        }
-                    }
-                },
-                {
-                    s_tag: "button",
-                    innerText: 'add',
-                    onclick:()=>{
-                        if(o_state.s_text != ''){
-                            o_state.o_list.a_o_todoitem.push(
-                                f_o_todoitem(o_state.s_text)
-                            );
-                            o_state.s_text = '';
-                            f_update_o_list();
-                        }
+                    class: "inputs", 
+                    f_a_o: ()=>{
+                        return [
+                            {
+                                a_s_prop_sync: 'b_show_done',
+                                s_tag: "button", 
+                                f_s_innerText: ()=>{
+                                    return (o_state.b_show_done) ? 'hide done': 'show done'
+                                },
+                                onclick: (o_event)=>{
+                                    o_state.b_show_done = !o_state.b_show_done;
+                                    o_state.o_list.a_o_todoitem = o_state.o_list.a_o_todoitem;
+                                }
+                            },
+                            {
+                                s_tag: "input", 
+                                type: 'text', 
+                                a_s_prop_sync: ['s_text'],
+                                onkeydown: (o_event)=>{
+                                    let s_text = o_event.target.value;
+                                    //if key is entered, add todoitem
+                                    if(o_event.key == 'Enter'){
+                                        if(s_text != ''){
+                                            o_state.o_list.a_o_todoitem.push(
+                                                f_o_todoitem(s_text)
+                                            );
+                                            o_state.s_text = '';
+                                            f_update_o_list();
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                s_tag: "button",
+                                innerText: 'add',
+                                onclick:()=>{
+                                    if(o_state.s_text != ''){
+                                        o_state.o_list.a_o_todoitem.push(
+                                            f_o_todoitem(o_state.s_text)
+                                        );
+                                        o_state.s_text = '';
+                                        f_update_o_list();
+                                    }
+                                }
+                            },
+                        ]
                     }
                 },
                 {
