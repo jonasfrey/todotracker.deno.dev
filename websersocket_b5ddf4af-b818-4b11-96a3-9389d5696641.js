@@ -90,9 +90,9 @@ let f_handler = async function(o_request){
         );
     }
     if(o_url.pathname == '/read'){
-        let o_post_data = o_request.json();
-        
-        let o_list = await o_kv.get([]`${s_prefix}.o_list.${o_post_data.s_id}`);
+        let o_post_data = await o_request.json();
+        // console.log(o_post_data)
+        let o_list = await o_kv.get([s_prefix, `o_list`,o_post_data.s_id]);
         
         return new Response(
             JSON.stringify(
@@ -106,8 +106,8 @@ let f_handler = async function(o_request){
         );
     }
     if(o_url.pathname == '/write'){
-        let o_post_data = o_request.json();
-        let o_list = await o_kv.set(`${s_prefix}.o_list`, o_post_data);
+        let o_post_data = await o_request.json();
+        let o_list = await o_kv.set([s_prefix, `o_list`,o_post_data.s_id], o_post_data);
         
         return new Response(
             JSON.stringify(
