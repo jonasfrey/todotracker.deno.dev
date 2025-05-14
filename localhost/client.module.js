@@ -527,7 +527,7 @@ let o = await f_o_html_from_o_js(
                                                                 }
                                                                 o_state.o_list.a_o_todoitem = o_list.a_o_todoitem;
                                                                 f_update_o_list();
-                                                                window.location.hash = `#${o_state.o_list.s_id}`;
+                                                                window.location.hash = `#${o_list.s_id}`;
                                                             } catch (error) {
                                                                 console.error('Error parsing JSON:', error);
                                                             }
@@ -602,6 +602,9 @@ let o = await f_o_html_from_o_js(
                                                     }
                                                 )
                                                 o_item.b_done_final = true;
+                                                if(!b_done){
+                                                    o_item.a_n_ts_ms_done.push(Date.now());
+                                                }
                                                 f_update_o_list();
                                             }
                                         },
