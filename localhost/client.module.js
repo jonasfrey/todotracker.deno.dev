@@ -124,6 +124,10 @@ f_add_css(
         display: flex;
         flex-direction: row;
         padding: 0.2rem;
+        align-items: center;
+    }
+    .o_todoitem button{
+        padding: 0rem;
     }
     .o_todoitem:hover {
         background: rgba(22,22,22,0.8);
@@ -272,6 +276,7 @@ let f_o_check_types_and_potentially_throw_error = function(
 let f_o_todoitem = function(
     s_text,
     n_ts_ms_created = Date.now(), 
+    b_done_final = false,
     s_bg_color = 'rgba(0,0,0,1.0)',
     a_n_ts_ms_done = []
 ){
@@ -286,6 +291,7 @@ let f_o_todoitem = function(
 
 let o_state = f_o_proxified_and_add_listeners(
     {
+        b_show_settings: false,
         s_text: '',
         o_todoitem: null,
         b_show_colorpicker: false,
@@ -342,6 +348,13 @@ let o_el_svg = null;
 // f_o_toast('this will take a while','loading', 5000)
 
 let f_update_o_list = async function(){
+
+    // update data structure updates that changes with different git versions
+    for(let o of o_state.o_list.a_o_todoitem){
+        if(!o?.b_done_final){
+            o.b_done_final = false;
+        }
+    }
     let o_resp = await fetch(
         '/write', 
         {
@@ -405,6 +418,13 @@ let o = await f_o_html_from_o_js(
                                     }
                                 }
                             },
+                            {
+                                s_tag: "button",
+                                innerText: '⚙️',
+                                onclick:()=>{
+                                   o_state.b_show_settings = !o_state.b_show_settings;
+                                }
+                            },
                         ]
                     }
                 },
@@ -432,6 +452,92 @@ let o = await f_o_html_from_o_js(
                                             }
                                         }
                                     })
+                                }
+                            }
+                        ]
+                        
+                    }
+                },
+                {
+                    a_s_prop_sync: ['b_show_settings'],
+                    f_b_render: ()=>{
+                        return o_state.b_show_settings;
+                    }, 
+                    f_a_o: ()=>{
+                        return [
+                            {
+                                class: 'colorpicker',
+                                onclick: (o_event)=>{
+                                    o_state.b_show_settings = false;
+                                },
+                                f_a_o: ()=>{
+                                    return [
+                                        {
+                                            class: 'o_button',
+                                            s_tag: 'button',
+                                            innerText: '➡️ export list as json',
+                                            onclick: ()=>{
+                                                // Convert JSON object to a string
+                                                const jsonStr = JSON.stringify(o_state.o_list, null, 2); // 2-space indentation for readability
+
+                                                // Create a Blob (file-like object) with the JSON data
+                                                const blob = new Blob([jsonStr], { type: 'application/json' });
+
+                                                // Create a temporary URL for the Blob
+                                                const url = URL.createObjectURL(blob);
+
+                                                // Create a hidden anchor element and trigger a click
+                                                const a = document.createElement('a');
+                                                a.href = url;
+                                                a.download = `${window.location.hostname}.json`;
+                                                document.body.appendChild(a);
+                                                a.click();
+
+                                                // Clean up
+                                                setTimeout(() => {
+                                                    document.body.removeChild(a);
+                                                    URL.revokeObjectURL(url);
+                                                }, 100);
+                                            }
+                                        },
+                                        {
+                                            class: 'o_button',
+                                            s_tag: 'button',
+                                            innerText: '⬅️ import list from json',
+                                            onclick: ()=>{
+                                                // Create a file input element
+                                                const input = document.createElement('input');
+                                                input.type = 'file';
+                                                input.accept = '.json'; // Accept only JSON files
+
+                                                // Trigger the file input click
+                                                input.click();
+
+                                                // Handle the file selection
+                                                input.onchange = async (event) => {
+                                                    const file = event.target.files[0];
+                                                    if (file) {
+                                                        const reader = new FileReader();
+                                                        reader.onload = (e) => {
+                                                            try {
+                                                                const o_list = JSON.parse(e.target.result);
+                                                                if(!f_b_UUIDv4(o_list?.s_id)){
+                                                                    throw new Error('s_id is not a valid UUIDv4');
+                                                                    alert(`json must have following structure: {s_id: 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx', a_o_todoitem: [${JSON.stringify(f_o_todoitem('testitem'))}]}`);
+                                                                }
+                                                                o_state.o_list.a_o_todoitem = o_list.a_o_todoitem;
+                                                                f_update_o_list();
+                                                                window.location.hash = `#${o_state.o_list.s_id}`;
+                                                            } catch (error) {
+                                                                console.error('Error parsing JSON:', error);
+                                                            }
+                                                        };
+                                                        reader.readAsText(file);
+                                                    }
+                                                };
+                                            }
+                                        }
+                                    ]
                                 }
                             }
                         ]
@@ -468,6 +574,9 @@ let o = await f_o_html_from_o_js(
                         })
                         .filter(
                             o=>{
+                                if(o?.b_done_final){
+                                    return false;
+                                }
                                 if(o_state.b_show_done){
                                     return true;
                                 }
@@ -480,7 +589,22 @@ let o = await f_o_html_from_o_js(
                                 class: 'o_todoitem',
                                 a_s_prop_sync: ['o_list.a_o_todoitem'],
                                 f_a_o: ()=>{
+                                    let b_done = o_todoitem.a_n_ts_ms_done.length%2 == 1
                                     return [
+                                        {
+                                            s_tag: "button", 
+                                            innerText: '🗑️', 
+                                            onclick: ()=>{
+                                                let o_item = o_state.o_list.a_o_todoitem.find(
+                                                    (o_todoitem2, n_index) => {
+                                                        return `${o_todoitem2.s_text}${o_todoitem2.n_ts_ms_created}` 
+                                                            == `${o_todoitem.s_text}${o_todoitem.n_ts_ms_created}`;
+                                                    }
+                                                )
+                                                o_item.b_done_final = true;
+                                                f_update_o_list();
+                                            }
+                                        },
                                         {
                                             s_tag: 'button',
                                             class: 'o_button',
@@ -493,11 +617,14 @@ let o = await f_o_html_from_o_js(
                                                 )
                                                 o_item.a_n_ts_ms_done.push(Date.now());
                                                 f_update_o_list();
+                                            },
+                                            f_s_innerText: ()=>{
+                                                return (b_done) ? '✅': '◻️'
                                             }
                                         },
                                         {
                                             innerText: o_todoitem.s_text,
-                                            style: `${(o_todoitem.a_n_ts_ms_done.length%2 == 1) ? 'text-decoration: line-through;': ''}`
+                                            style: `${(b_done) ? 'text-decoration: line-through;': ''}`
                                         },
                                         {
                                             s_tag: 'button',
@@ -523,6 +650,10 @@ let o = await f_o_html_from_o_js(
 )
 document.body.appendChild(o);
 
+
+let f_b_UUIDv4 = function(s_uuid) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s_uuid);
+}
 
 document.addEventListener('keydown', (event) => {
         
