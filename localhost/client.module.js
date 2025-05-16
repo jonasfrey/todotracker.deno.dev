@@ -14,8 +14,8 @@ import {
     o_state_a_o_toast,
     s_css_a_o_toast
 } 
-from "./tmp.js"
-// from "https://deno.land/x/handyhelpers@5.2.4/mod.js"
+// from "./tmp.js"
+from "https://deno.land/x/handyhelpers@5.2.6/mod.js"
 
 async function f_s_hashed_sha256(s) {
     // Encode the string as UTF-8
@@ -431,7 +431,6 @@ let f_v_o_list_from_s_id = async function(s_id){
 if(s_id != ``){
     b_new = false;
     let v_o_list = await f_v_o_list_from_s_id(s_id);
-    debugger
     if(v_o_list != null){
         o_state.o_list.s_id = s_id;    
         o_state.o_list.a_o_todoitem = v_o_list.a_o_todoitem;
@@ -514,6 +513,20 @@ let o = await f_o_html_from_o_js(
         class: "app",
         f_a_o: ()=>{
             return [
+                {
+                    s_tag: 'a',
+                    href: 'https://buymeacoffee.com/jonasimmanuelfrey',
+                    style: "position:fixed; top:0; right:0; z-index: 100;max-width:100px; background:rgba(0,0,0,0.5);",
+                    f_a_o: ()=>{
+                        return [
+                            {
+                                style: 'width: 100%;padding:0;',
+                                s_tag: "img",
+                                src: './bmc-button.png',
+                            }
+                        ]
+                    }
+                },
                 {
                     class: "inputs", 
                     f_a_o: ()=>{
