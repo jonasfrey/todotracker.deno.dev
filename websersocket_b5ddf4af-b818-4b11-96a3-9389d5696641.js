@@ -4,6 +4,7 @@ import {
     f_v_before_return_response__fileserver
 } from "https://deno.land/x/websersocket@5.0.0/mod.js"
 
+
 import {
     O_ws_client
 } from "./classes.module.js"
@@ -29,6 +30,8 @@ let s_prefix = 'todotracker.deno.dev';
 // if(!b_deno_deploy){
 //     await ensureDir(s_path_abs_folder_cached_shaders)// deno deploy is read only...
 // }
+
+
 
 let f_handler = async function(o_request){
 
@@ -92,11 +95,37 @@ let f_handler = async function(o_request){
     if(o_url.pathname == '/read'){
         let o_post_data = await o_request.json();
         // console.log(o_post_data)
-        let o_list = await o_kv.get([s_prefix, `o_list`,o_post_data.s_id]);
+        let a_n_u8_encrypted = await o_kv.get([s_prefix, `o_list`,o_post_data.s_id_hashed]);
+        // console.log(a_n_u8_encrypted);
+        return new Response(
+            a_n_u8_encrypted?.value,
+            { 
+                headers: {
+                    'Content-type': "application/octet-stream"
+                }
+            }
+        );
+    }
+    if(o_url.pathname == '/write'){
+        let a_n_u8_payload = new Uint8Array(await o_request.arrayBuffer());
+        const view = new DataView(a_n_u8_payload.buffer);
+        // Read hash length (first 2 bytes)
+        const n_bytes_hash = view.getUint16(0);
+        
+        // Read hash (next N bytes)
+        const s_id_hashed = new TextDecoder().decode(
+            a_n_u8_payload.slice(2, 2 + n_bytes_hash)
+        );
+        
+        // Remaining bytes are the encrypted data
+        const a_n_u8_encrypted = a_n_u8_payload.slice(2 + n_bytes_hash);
+        // console.log(a_n_u8_encrypted);
+        // Store in Deno KV
+        let v_list = await o_kv.set([s_prefix, `o_list`,s_id_hashed], a_n_u8_encrypted);
         
         return new Response(
             JSON.stringify(
-                o_list
+                {write: true}
             ),
             { 
                 headers: {
@@ -105,18 +134,22 @@ let f_handler = async function(o_request){
             }
         );
     }
-    if(o_url.pathname == '/write'){
+    if(o_url.pathname == '/delete'){
         let o_post_data = await o_request.json();
-        let o_list = await o_kv.set([s_prefix, `o_list`,o_post_data.s_id], o_post_data);
-        
+        // console.log(o_post_data)
+        let a_v_key = [s_prefix, `o_list`,o_post_data.s_id_hashed]
+        let a_n_u8_encrypted = await o_kv.get(a_v_key);
+        if(a_n_u8_encrypted){
+            await o_kv.delete(a_v_key);
+        }
         return new Response(
             JSON.stringify(
-                o_list
+                {delete: true}
             ),
             { 
                 headers: {
                     'Content-type': "application/json"
-                }
+                }, 
             }
         );
     }

@@ -17,6 +17,99 @@ import {
 from "./tmp.js"
 // from "https://deno.land/x/handyhelpers@5.2.4/mod.js"
 
+async function f_s_hashed_sha256(s) {
+    // Encode the string as UTF-8
+    const msgBuffer = new TextEncoder().encode(s);
+    
+    // Hash the message
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    
+    // Convert to hex string
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    return hashHex;
+  }
+
+
+// Encrypt JSON data
+let f_a_n_u8_encrypted_from_string = async function(jsonData, uuid) {
+    try {
+        // Convert UUID to key material
+        const keyMaterial = await crypto.subtle.importKey(
+            'raw',
+            uuidToArrayBuffer(uuid),
+            { name: 'AES-CBC' },
+            false,
+            ['encrypt']
+        );
+        
+        // Generate IV (recommended to be random and stored with ciphertext)
+        const iv = crypto.getRandomValues(new Uint8Array(16));
+        
+        // Convert JSON to string then to ArrayBuffer
+        const encoder = new TextEncoder();
+        const data = encoder.encode(JSON.stringify(jsonData));
+        
+        // Encrypt the data
+        const ciphertext = await crypto.subtle.encrypt(
+            {
+                name: 'AES-CBC',
+                iv: iv
+            },
+            keyMaterial,
+            data
+        );
+        
+        // Combine IV and ciphertext for storage/transmission
+        const result = new Uint8Array(iv.length + ciphertext.byteLength);
+        result.set(iv, 0);
+        result.set(new Uint8Array(ciphertext), iv.length);
+        
+        return result;
+    } catch (e) {
+        console.error('Encryption error:', e);
+        throw e;
+    }
+}
+
+// Decrypt data back to JSON
+let f_s_dectrypted_from_a_n_u8 = async function(encryptedData, uuid) {
+    try {
+        // Split IV and ciphertext
+        const iv = encryptedData.slice(0, 16);
+        const ciphertext = encryptedData.slice(16);
+        
+        // Convert UUID to key material
+        const keyMaterial = await crypto.subtle.importKey(
+            'raw',
+            uuidToArrayBuffer(uuid),
+            { name: 'AES-CBC' },
+            false,
+            ['decrypt']
+        );
+        
+        // Decrypt the data
+        const decrypted = await crypto.subtle.decrypt(
+            {
+                name: 'AES-CBC',
+                iv: iv
+            },
+            keyMaterial,
+            ciphertext
+        );
+        
+        // Convert back to JSON
+        const decoder = new TextDecoder();
+        return decoder.decode(decrypted);
+    } catch (e) {
+        console.error('Decryption error:', e);
+        throw e;
+    }
+}
+
+
+
 
 // import { Boolean } from '/three.js-r126/examples/jsm/math/BooleanOperation.js';
 // import { STLExporter } from '/three/STLExporter.js';
@@ -128,6 +221,9 @@ f_add_css(
     }
     .o_todoitem button{
         padding: 0rem;
+    }
+    button.bgcolor{
+        padding: 0.5rem;
     }
     .o_todoitem:hover {
         background: rgba(22,22,22,0.8);
@@ -312,21 +408,32 @@ let o_state = f_o_proxified_and_add_listeners(
 )
 let b_new = true;
 let s_id = window.location.hash.replace('#', '');
-if(s_id != ``){
-    b_new = false;
+let f_v_o_list_from_s_id = async function(s_id){
+    let s_id_hashed = await f_s_hashed_sha256(s_id);
     let o_resp = await fetch(
         '/read', 
         {
             method: 'POST',
             body: JSON.stringify(
-                {s_id}
+                {s_id_hashed}
             )
         }
     );
-    let o_data = await o_resp.json();
-    if(o_data.value != null){
+
+    let a_n_u8_encrypted = new Uint8Array(await o_resp.arrayBuffer());
+    if(a_n_u8_encrypted.length == 0){
+        return null;
+    }
+    const s_json_decrypted = await f_s_dectrypted_from_a_n_u8(new Uint8Array(a_n_u8_encrypted), s_id);
+    let o_data = JSON.parse(s_json_decrypted);
+    return o_data;
+}
+if(s_id != ``){
+    b_new = false;
+    let v_o_list = await f_v_o_list_from_s_id(s_id);
+    if(v_o_list != null){
         o_state.o_list.s_id = s_id;    
-        o_state.o_list.a_o_todoitem = o_data.value.a_o_todoitem;
+        o_state.o_list.a_o_todoitem = v_o_list.a_o_todoitem;
     }else{
         b_new = true;
     }
@@ -347,6 +454,37 @@ let o_el_svg = null;
 // f_o_toast('this is error','error', 5000)
 // f_o_toast('this will take a while','loading', 5000)
 
+let f_a_n_u8_payload = async function(
+    o_data,
+    s_id
+){
+    let a_n_u8_encrypted = await f_a_n_u8_encrypted_from_string(
+        o_data, 
+        s_id // encrypt with the id
+    )
+    const encoder = new TextEncoder();
+    let s_id_hashed = await f_s_hashed_sha256(s_id); // hash the id
+    const a_n_u8_hashed_id = encoder.encode(s_id_hashed);
+
+    // Create a single ArrayBuffer with:
+    // - 2 bytes for hash length (Uint16)
+    // - N bytes for hash
+    // - Remaining bytes for encrypted data
+    let n_bytes_hash = 2;
+    const buffer = new Uint8Array(n_bytes_hash + a_n_u8_hashed_id.length + a_n_u8_encrypted.length);
+    const view = new DataView(buffer.buffer);
+  
+    // Write hash length (2 bytes)
+    view.setUint16(0, a_n_u8_hashed_id.length);
+  
+    // Write hash bytes
+    buffer.set(a_n_u8_hashed_id, n_bytes_hash);
+  
+    // Write encrypted data
+    buffer.set(a_n_u8_encrypted, n_bytes_hash + a_n_u8_hashed_id.length);
+  
+    return buffer
+}
 let f_update_o_list = async function(){
 
     // update data structure updates that changes with different git versions
@@ -355,13 +493,16 @@ let f_update_o_list = async function(){
             o.b_done_final = false;
         }
     }
+    let a_n_u8_payload = await f_a_n_u8_payload(
+        o_state.o_list,
+        o_state.o_list.s_id
+    )
     let o_resp = await fetch(
         '/write', 
         {
             method: 'POST',
-            body: JSON.stringify(
-                o_state.o_list
-            )
+            'Content-Type': 'application/octet-stream', // Important for binary data
+            body: a_n_u8_payload
         }
     );
     // f_o_toast('saved', 'success', 5000)
@@ -518,12 +659,19 @@ let o = await f_o_html_from_o_js(
                                                     const file = event.target.files[0];
                                                     if (file) {
                                                         const reader = new FileReader();
-                                                        reader.onload = (e) => {
+                                                        reader.onload = async (e) => {
                                                             try {
                                                                 const o_list = JSON.parse(e.target.result);
                                                                 if(!f_b_UUIDv4(o_list?.s_id)){
-                                                                    throw new Error('s_id is not a valid UUIDv4');
                                                                     alert(`json must have following structure: {s_id: 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx', a_o_todoitem: [${JSON.stringify(f_o_todoitem('testitem'))}]}`);
+                                                                    throw new Error('s_id is not a valid UUIDv4');
+                                                                }
+                                                                let v_o_list = await f_v_o_list_from_s_id(s_id);
+                                                                if(v_o_list != null){
+                                                                    let b = confirm(`a list with the id ${s_id} already exists. overwrite existing list?`);
+                                                                    if(!b){
+                                                                        return;
+                                                                    }
                                                                 }
                                                                 o_state.o_list.a_o_todoitem = o_list.a_o_todoitem;
                                                                 f_update_o_list();
@@ -536,7 +684,28 @@ let o = await f_o_html_from_o_js(
                                                     }
                                                 };
                                             }
-                                        }
+                                        }, 
+                                        {
+                                            class: 'o_button',
+                                            s_tag: 'button',
+                                            innerText: '❌ delete list (ireversable)',
+                                            onclick: async ()=>{
+                                                o_state.o_list.a_o_todoitem = [];
+                                               
+                                                let s_id_hashed = await f_s_hashed_sha256(o_state.o_list.s_id);
+                                                let o_resp = await fetch(
+                                                    '/delete', 
+                                                    {
+                                                        method: 'POST',
+                                                        body: JSON.stringify(
+                                                            {s_id_hashed}
+                                                        )
+                                                    }
+                                                );
+                                                console.log(o_resp.json())
+                                            }
+                                        }, 
+                                       
                                     ]
                                 }
                             }
@@ -548,7 +717,7 @@ let o = await f_o_html_from_o_js(
                     a_s_prop_sync: ['b_show_done', 'o_list.a_o_todoitem.[n]'],
                     class: 'a_o_todoitem',
                     f_a_o: ()=>{
-                        console.log('asdfrender')
+                        // console.log('asdfrender')
                         return o_state.o_list.a_o_todoitem
                         .toSorted((a, b) => {
                               // Get the last timestamp for each item (determines current status)
@@ -584,7 +753,7 @@ let o = await f_o_html_from_o_js(
                             }
                         )
                         .map(o_todoitem=>{
-                            console.log(o_todoitem)
+                            // console.log(o_todoitem)
                             return {
                                 class: 'o_todoitem',
                                 a_s_prop_sync: ['o_list.a_o_todoitem'],
@@ -631,12 +800,12 @@ let o = await f_o_html_from_o_js(
                                         },
                                         {
                                             s_tag: 'button',
-                                            class: 'o_button',
+                                            class: 'o_button bgcolor',
                                             style: `background: ${o_todoitem.s_bg_color};`,
                                             onclick: ()=>{
                                                 o_state.o_todoitem = o_todoitem;
                                                 o_state.b_show_colorpicker = true;
-                                                console.log(o_todoitem)
+                                                // console.log(o_todoitem)
                                                 
                                             }
                                         }, 
@@ -666,3 +835,20 @@ document.addEventListener('keydown', (event) => {
         }
     }
 });
+
+
+// Convert UUID string to ArrayBuffer
+function uuidToArrayBuffer(uuid) {
+    // Remove hyphens and convert to hex string
+    const hex = uuid.replace(/-/g, '');
+    const buffer = new ArrayBuffer(16);
+    const view = new DataView(buffer);
+    
+    // Parse hex string into ArrayBuffer
+    for (let i = 0; i < 16; i++) {
+        view.setUint8(i, parseInt(hex.substr(i * 2, 2), 16));
+    }
+    
+    return buffer;
+}
+
