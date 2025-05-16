@@ -431,6 +431,7 @@ let f_v_o_list_from_s_id = async function(s_id){
 if(s_id != ``){
     b_new = false;
     let v_o_list = await f_v_o_list_from_s_id(s_id);
+    debugger
     if(v_o_list != null){
         o_state.o_list.s_id = s_id;    
         o_state.o_list.a_o_todoitem = v_o_list.a_o_todoitem;
@@ -673,7 +674,7 @@ let o = await f_o_html_from_o_js(
                                                                         return;
                                                                     }
                                                                 }
-                                                                o_state.o_list.a_o_todoitem = o_list.a_o_todoitem;
+                                                                o_state.o_list = o_list;
                                                                 f_update_o_list();
                                                                 window.location.hash = `#${o_list.s_id}`;
                                                             } catch (error) {
