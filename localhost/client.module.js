@@ -267,6 +267,10 @@ f_add_css(
         position:fixed;
         bottom:0;
     }        
+    .a_o_todoitem {
+        max-height: 95vh !important;!i;!;
+        overflow-y: scroll;
+    }
     ${s_css_a_o_toast}
     ${
         f_s_css_from_o_variables(
