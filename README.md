@@ -1,7 +1,7 @@
 # todolist.deno.dev
 # 🚀 Todolist-Tracker – Simple, Encrypted Todo Lists  
 
-**🔗 Live Demo:** [todolisttracker.deno.dev](https://todolisttracker.deno.dev)  
+**🔗 Live Demo:** [https://todotracker.deno.dev/](https://todotracker.deno.dev/)  
 
 A minimalist, privacy-focused todo list app built with:  
 - **Deno** 🦕 (runtime)  
