@@ -270,7 +270,7 @@ f_add_css(
     .a_o_todoitem {
         max-height: 95vh !important;!i;!;
         overflow-y: scroll;
-    }
+    }f
     ${s_css_a_o_toast}
     ${
         f_s_css_from_o_variables(
@@ -708,6 +708,11 @@ let o = await f_o_html_from_o_js(
                                             s_tag: 'button',
                                             innerText: '❌ delete list (ireversable)',
                                             onclick: async ()=>{
+                                                let b = confirm(`do you really want to delete this list? this cannot be undone!`);
+                                                if(!b){
+                                                    return;
+                                                }
+
                                                 o_state.o_list.a_o_todoitem = [];
                                                
                                                 let s_id_hashed = await f_s_hashed_sha256(o_state.o_list.s_id);
