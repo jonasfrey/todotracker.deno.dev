@@ -15,7 +15,7 @@ import {
     s_css_a_o_toast
 } 
 // from "./tmp.js"
-from "https://deno.land/x/handyhelpers@5.2.6/mod.js"
+from "https://deno.land/x/handyhelpers@5.3.6/mod.js"
 
 async function f_s_hashed_sha256(s) {
     // Encode the string as UTF-8
@@ -393,7 +393,8 @@ let o_state = f_o_proxified_and_add_listeners(
     {
         b_show_settings: false,
         s_text: '',
-        o_todoitem: null,
+        s_bg_color: 'transparent', // default color
+        o_todoitem: f_o_todoitem(''),
         b_show_colorpicker: false,
         b_show_done : true, 
         o_list: {
@@ -518,9 +519,10 @@ let o = await f_o_html_from_o_js(
         f_a_o: ()=>{
             return [
                 {
+
                     s_tag: 'a',
                     href: 'https://buymeacoffee.com/jonasimmanuelfrey',
-                    style: "position:fixed; top:0; right:0; z-index: 100;max-width:100px; background:rgba(0,0,0,0.5);",
+                    f_s_style:()=>{return "position:fixed; top:0; right:0; z-index: 100;max-width:100px; background:rgba(0,0,0,0.5);"},
                     f_a_o: ()=>{
                         return [
                             {
@@ -565,12 +567,27 @@ let o = await f_o_html_from_o_js(
                                 }
                             },
                             {
+                                s_tag: 'button',
+                                class: 'o_button bgcolor',
+                                a_s_prop_sync: ['s_bg_color'],
+                                f_s_style:()=>{ 
+                                    return `background-color: ${o_state.s_bg_color};padding: 1rem;`
+                                },
+
+                                onclick: ()=>{
+                                    o_state.b_show_colorpicker = true;
+                                    // console.log(o_todoitem)
+                                }
+                            }, 
+                            {
                                 s_tag: "button",
                                 innerText: 'add',
                                 onclick:()=>{
                                     if(o_state.s_text != ''){
+                                        let o_todoitem = f_o_todoitem(o_state.s_text);
+                                        o_todoitem.s_bg_color = o_state.s_bg_color;
                                         o_state.o_list.a_o_todoitem.push(
-                                            f_o_todoitem(o_state.s_text)
+                                            o_todoitem
                                         );
                                         o_state.s_text = '';
                                         f_update_o_list();
@@ -608,6 +625,7 @@ let o = await f_o_html_from_o_js(
                                             onclick: ()=>{
                                                 o_state.b_show_colorpicker = false;
                                                 o_state.o_todoitem.s_bg_color = s;
+                                                o_state.s_bg_color = s;
                                                 f_update_o_list();
                                             }
                                         }
