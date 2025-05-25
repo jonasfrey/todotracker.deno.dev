@@ -608,6 +608,7 @@ let o = await f_o_html_from_o_js(
                                             onclick: ()=>{
                                                 o_state.b_show_colorpicker = false;
                                                 o_state.o_todoitem.s_bg_color = s;
+                                                f_update_o_list();
                                             }
                                         }
                                     })
