@@ -106,6 +106,18 @@ let f_handler = async function(o_request){
             }
         );
     }
+    if(o_url.pathname == '/serverconnectiontest'){
+        return new Response(
+            JSON.stringify(
+                {b_success: true}
+            ),
+            { 
+                headers: {
+                    'Content-type': "application/json"
+                }
+            }
+        );
+    }
     if(o_url.pathname == '/write'){
         let a_n_u8_payload = new Uint8Array(await o_request.arrayBuffer());
         const view = new DataView(a_n_u8_payload.buffer);

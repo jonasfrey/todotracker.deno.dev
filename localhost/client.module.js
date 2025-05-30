@@ -120,7 +120,7 @@ o_variables.n_rem_font_size_base = 1. // adjust font size, other variables can a
 o_variables.n_rem_padding_interactive_elements = 0.5; // adjust padding for interactive elements 
 f_add_css(
     `
-
+    ${s_css_a_o_toast}
     #${s_id_error_msg}{
         position: absolute;
         width: 100%;
@@ -134,8 +134,7 @@ f_add_css(
         max-width: 100vw;
         style: "display: flex;
         flex-direction: row;
-        padding: 1rem;
-
+        
         background-size:cover;
     }
     h2{
@@ -219,6 +218,11 @@ f_add_css(
         padding: 0.2rem;
         align-items: center;
     }
+    .o_todoitem a {
+        padding: 0 !important;!imp;!impl;!i;!;
+        margin:  0 !important;!i;!;
+        background: transparent;
+    }
     .o_todoitem button{
         padding: 0rem;
     }
@@ -263,14 +267,19 @@ f_add_css(
 
 
     }
-    .inputs{
-        position:fixed;
-        bottom:0;
-    }        
+      
     .a_o_todoitem {
         max-height: 95vh !important;!i;!;
         overflow-y: scroll;
-    }f
+    }
+
+    .fullpage {
+        height: 100vh;
+        display:flex; 
+        flex-direction: column;
+        padding: .5rem;
+        box-sizing: border-box;
+    }
     ${s_css_a_o_toast}
     ${
         f_s_css_from_o_variables(
@@ -391,6 +400,10 @@ let f_o_todoitem = function(
 
 let o_state = f_o_proxified_and_add_listeners(
     {
+        n_ms_delta_max_server_network_connection_test: 1000,
+        n_ms_interval_server_network_connection_test: 3333,
+        n_id_interval_server_network_connection_test: null,
+        ...o_state_a_o_toast,
         b_show_settings: false,
         s_text: '',
         s_bg_color: 'transparent', // default color
@@ -513,11 +526,24 @@ let f_update_o_list = async function(){
     // f_o_toast('saved', 'success', 5000)
 }
 
+let f_s_html_text_with_url = function(text, options = {}){
+    // return text
+    // const urlRegex = /(?:https?:\/\/)?(?:www\.)?[^\s<>"']+\.[^\s<>"']+/gi;
+    // let urlRegex = /\bhttps?:\/\/[^\s<>"']+/gi;
+    let urlRegex = /\b(?:https?:\/\/[^\s<>"']+|(?:[a-z0-9\-]+\.)+[a-z]{2,}(?::\d+)?(?:\/[^\s<>"']*)?)/gi;
+
+    return text.replace(urlRegex, url => {
+      const href = url.startsWith('http') ? url : 'http://' + url;
+      return `<a href="${href}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+    });
+}
+
 let o = await f_o_html_from_o_js(
     {
         class: "app",
         f_a_o: ()=>{
             return [
+                f_o_js_a_o_toast(o_state),
                 {
 
                     s_tag: 'a',
@@ -533,77 +559,7 @@ let o = await f_o_html_from_o_js(
                         ]
                     }
                 },
-                {
-                    class: "inputs", 
-                    f_a_o: ()=>{
-                        return [
-                            {
-                                a_s_prop_sync: 'b_show_done',
-                                s_tag: "button", 
-                                f_s_innerText: ()=>{
-                                    return (o_state.b_show_done) ? 'hide done': 'show done'
-                                },
-                                onclick: (o_event)=>{
-                                    o_state.b_show_done = !o_state.b_show_done;
-                                    o_state.o_list.a_o_todoitem = o_state.o_list.a_o_todoitem;
-                                }
-                            },
-                            {
-                                s_tag: "input", 
-                                type: 'text', 
-                                a_s_prop_sync: ['s_text'],
-                                onkeydown: (o_event)=>{
-                                    let s_text = o_event.target.value;
-                                    //if key is entered, add todoitem
-                                    if(o_event.key == 'Enter'){
-                                        if(s_text != ''){
-                                            o_state.o_list.a_o_todoitem.push(
-                                                f_o_todoitem(s_text)
-                                            );
-                                            o_state.s_text = '';
-                                            f_update_o_list();
-                                        }
-                                    }
-                                }
-                            },
-                            {
-                                s_tag: 'button',
-                                class: 'o_button bgcolor',
-                                a_s_prop_sync: ['s_bg_color'],
-                                f_s_style:()=>{ 
-                                    return `background-color: ${o_state.s_bg_color};padding: 1rem;`
-                                },
 
-                                onclick: ()=>{
-                                    o_state.b_show_colorpicker = true;
-                                    // console.log(o_todoitem)
-                                }
-                            }, 
-                            {
-                                s_tag: "button",
-                                innerText: 'add',
-                                onclick:()=>{
-                                    if(o_state.s_text != ''){
-                                        let o_todoitem = f_o_todoitem(o_state.s_text);
-                                        o_todoitem.s_bg_color = o_state.s_bg_color;
-                                        o_state.o_list.a_o_todoitem.push(
-                                            o_todoitem
-                                        );
-                                        o_state.s_text = '';
-                                        f_update_o_list();
-                                    }
-                                }
-                            },
-                            {
-                                s_tag: "button",
-                                innerText: '⚙️',
-                                onclick:()=>{
-                                   o_state.b_show_settings = !o_state.b_show_settings;
-                                }
-                            },
-                        ]
-                    }
-                },
                 {
                     a_s_prop_sync: ['b_show_colorpicker'],
                     f_b_render: ()=>{
@@ -650,6 +606,16 @@ let o = await f_o_html_from_o_js(
                                 },
                                 f_a_o: ()=>{
                                     return [
+                                        // {
+                                        //     a_s_prop_sync: 'b_show_done',
+                                        //     s_tag: "button", 
+                                        //     f_s_innerText: ()=>{
+                                        //         return (o_state.b_show_done) ? 'hide done': 'show done'
+                                        //     },
+                                        //     onclick: (o_event)=>{
+                                        //         o_state.b_show_done = !o_state.b_show_done;
+                                        //     }
+                                        // },
                                         {
                                             class: 'o_button',
                                             s_tag: 'button',
@@ -756,105 +722,174 @@ let o = await f_o_html_from_o_js(
                     }
                 },
                 {
-                    a_s_prop_sync: ['b_show_done', 'o_list.a_o_todoitem.[n]'],
-                    class: 'a_o_todoitem',
+                    class: "fullpage", 
                     f_a_o: ()=>{
-                        // console.log('asdfrender')
-                        return o_state.o_list.a_o_todoitem
-                        .toSorted((a, b) => {
-                              // Get the last timestamp for each item (determines current status)
-                            const aLastTimestamp = a.a_n_ts_ms_done[a.a_n_ts_ms_done.length - 1] || 0;
-                            const bLastTimestamp = b.a_n_ts_ms_done[b.a_n_ts_ms_done.length - 1] || 0;
-                            
-                            // Determine status: even length = done, odd length = undone
-                            const aIsDone = a.a_n_ts_ms_done.length % 2 === 0;
-                            const bIsDone = b.a_n_ts_ms_done.length % 2 === 0;
-                            
-                            // First sort by status (UNDONE first, DONE second)
-                            if (aIsDone && !bIsDone) return -1;   // a is done, b is undone → b comes first
-                            if (!aIsDone && bIsDone) return 1;  // a is undone, b is done → a comes first
-                            
-                            // If same status, sort by timestamp (newest first)
-                            if (aIsDone) {
-                                // Both are done → sort by original completion time (newest done first)
-                                return b.a_n_ts_ms_done[0] - a.a_n_ts_ms_done[0];
-                            } else {
-                                // Both are undone → sort by last undone time (newest undone first)
-                                return bLastTimestamp - aLastTimestamp;
-                            }
-                        })
-                        .filter(
-                            o=>{
-                                if(o?.b_done_final){
-                                    return false;
-                                }
-                                if(o_state.b_show_done){
-                                    return true;
-                                }
-                                return o.a_n_ts_ms_done?.at(-1) == null;
-                            }
-                        )
-                        .map(o_todoitem=>{
-                            // console.log(o_todoitem)
-                            return {
-                                class: 'o_todoitem',
-                                a_s_prop_sync: ['o_list.a_o_todoitem'],
+                        return [                            
+
+                            {
+                                a_s_prop_sync: ['b_show_done', 'o_list.a_o_todoitem.[n]'],
+                                class: 'a_o_todoitem',
                                 f_a_o: ()=>{
-                                    let b_done = o_todoitem.a_n_ts_ms_done.length%2 == 1
+                                    // console.log('asdfrender')
+                                    return o_state.o_list.a_o_todoitem
+                                    .toSorted((a, b) => {
+                                          // Get the last timestamp for each item (determines current status)
+                                        const aLastTimestamp = a.a_n_ts_ms_done[a.a_n_ts_ms_done.length - 1] || 0;
+                                        const bLastTimestamp = b.a_n_ts_ms_done[b.a_n_ts_ms_done.length - 1] || 0;
+                                        
+                                        // Determine status: even length = done, odd length = undone
+                                        const aIsDone = a.a_n_ts_ms_done.length % 2 === 0;
+                                        const bIsDone = b.a_n_ts_ms_done.length % 2 === 0;
+                                        
+                                        // First sort by status (UNDONE first, DONE second)
+                                        if (aIsDone && !bIsDone) return -1;   // a is done, b is undone → b comes first
+                                        if (!aIsDone && bIsDone) return 1;  // a is undone, b is done → a comes first
+                                        
+                                        // If same status, sort by timestamp (newest first)
+                                        if (aIsDone) {
+                                            // Both are done → sort by original completion time (newest done first)
+                                            return b.a_n_ts_ms_done[0] - a.a_n_ts_ms_done[0];
+                                        } else {
+                                            // Both are undone → sort by last undone time (newest undone first)
+                                            return bLastTimestamp - aLastTimestamp;
+                                        }
+                                    })
+                                    .filter(
+                                        o=>{
+                                            if(o?.b_done_final){
+                                                return false;
+                                            }
+                                            if(o_state.b_show_done){
+                                                return true;
+                                            }
+                                            return o.a_n_ts_ms_done?.at(-1) == null;
+                                        }
+                                    )
+                                    .map(o_todoitem=>{
+                                        // console.log(o_todoitem)
+                                        return {
+                                            class: 'o_todoitem',
+                                            a_s_prop_sync: ['o_list.a_o_todoitem'],
+                                            f_a_o: ()=>{
+                                                let b_done = o_todoitem.a_n_ts_ms_done.length%2 == 1
+                                                return [
+                                                    {
+                                                        s_tag: "button", 
+                                                        innerText: '🗑️', 
+                                                        onclick: ()=>{
+                                                            let o_item = o_state.o_list.a_o_todoitem.find(
+                                                                (o_todoitem2, n_index) => {
+                                                                    return `${o_todoitem2.s_text}${o_todoitem2.n_ts_ms_created}` 
+                                                                        == `${o_todoitem.s_text}${o_todoitem.n_ts_ms_created}`;
+                                                                }
+                                                            )
+                                                            o_item.b_done_final = true;
+                                                            if(!b_done){
+                                                                o_item.a_n_ts_ms_done.push(Date.now());
+                                                            }
+                                                            f_update_o_list();
+                                                        }
+                                                    },
+                                                    {
+                                                        s_tag: 'button',
+                                                        class: 'o_button',
+                                                        onclick: ()=>{
+                                                            let o_item = o_state.o_list.a_o_todoitem.find(
+                                                                (o_todoitem2, n_index) => {
+                                                                    return `${o_todoitem2.s_text}${o_todoitem2.n_ts_ms_created}` 
+                                                                        == `${o_todoitem.s_text}${o_todoitem.n_ts_ms_created}`;
+                                                                }
+                                                            )
+                                                            o_item.a_n_ts_ms_done.push(Date.now());
+                                                            f_update_o_list();
+                                                        },
+                                                        f_s_innerText: ()=>{
+                                                            return (b_done) ? '✅': '◻️'
+                                                        }
+                                                    },
+                                                    {
+                                                        innerHTML: f_s_html_text_with_url(o_todoitem.s_text),
+                                                        style: `${(b_done) ? 'text-decoration: line-through;': ''}`
+                                                    },
+                                                    {
+                                                        s_tag: 'button',
+                                                        class: 'o_button bgcolor',
+                                                        style: `background: ${o_todoitem.s_bg_color};`,
+                                                        onclick: ()=>{
+                                                            o_state.o_todoitem = o_todoitem;
+                                                            o_state.b_show_colorpicker = true;
+                                                            // console.log(o_todoitem)
+                                                            
+                                                        }
+                                                    }, 
+                                                ]
+                                            }   
+                                        }
+                                    })
+                                }
+                            }, 
+                            {
+                                class: "inputs", 
+                                f_a_o: ()=>{
                                     return [
+                                        
                                         {
-                                            s_tag: "button", 
-                                            innerText: '🗑️', 
-                                            onclick: ()=>{
-                                                let o_item = o_state.o_list.a_o_todoitem.find(
-                                                    (o_todoitem2, n_index) => {
-                                                        return `${o_todoitem2.s_text}${o_todoitem2.n_ts_ms_created}` 
-                                                            == `${o_todoitem.s_text}${o_todoitem.n_ts_ms_created}`;
+                                            s_tag: "input", 
+                                            type: 'text', 
+                                            a_s_prop_sync: ['s_text'],
+                                            onkeydown: (o_event)=>{
+                                                let s_text = o_event.target.value;
+                                                //if key is entered, add todoitem
+                                                if(o_event.key == 'Enter'){
+                                                    if(s_text != ''){
+                                                        o_state.o_list.a_o_todoitem.push(
+                                                            f_o_todoitem(s_text)
+                                                        );
+                                                        o_state.s_text = '';
+                                                        f_update_o_list();
                                                     }
-                                                )
-                                                o_item.b_done_final = true;
-                                                if(!b_done){
-                                                    o_item.a_n_ts_ms_done.push(Date.now());
                                                 }
-                                                f_update_o_list();
                                             }
-                                        },
-                                        {
-                                            s_tag: 'button',
-                                            class: 'o_button',
-                                            onclick: ()=>{
-                                                let o_item = o_state.o_list.a_o_todoitem.find(
-                                                    (o_todoitem2, n_index) => {
-                                                        return `${o_todoitem2.s_text}${o_todoitem2.n_ts_ms_created}` 
-                                                            == `${o_todoitem.s_text}${o_todoitem.n_ts_ms_created}`;
-                                                    }
-                                                )
-                                                o_item.a_n_ts_ms_done.push(Date.now());
-                                                f_update_o_list();
-                                            },
-                                            f_s_innerText: ()=>{
-                                                return (b_done) ? '✅': '◻️'
-                                            }
-                                        },
-                                        {
-                                            innerText: o_todoitem.s_text,
-                                            style: `${(b_done) ? 'text-decoration: line-through;': ''}`
                                         },
                                         {
                                             s_tag: 'button',
                                             class: 'o_button bgcolor',
-                                            style: `background: ${o_todoitem.s_bg_color};`,
+                                            a_s_prop_sync: ['s_bg_color'],
+                                            f_s_style:()=>{ 
+                                                return `background-color: ${o_state.s_bg_color};padding: 1rem;`
+                                            },
+            
                                             onclick: ()=>{
-                                                o_state.o_todoitem = o_todoitem;
                                                 o_state.b_show_colorpicker = true;
                                                 // console.log(o_todoitem)
-                                                
                                             }
                                         }, 
+                                        {
+                                            s_tag: "button",
+                                            innerText: 'add',
+                                            onclick:()=>{
+                                                if(o_state.s_text != ''){
+                                                    let o_todoitem = f_o_todoitem(o_state.s_text);
+                                                    o_todoitem.s_bg_color = o_state.s_bg_color;
+                                                    o_state.o_list.a_o_todoitem.push(
+                                                        o_todoitem
+                                                    );
+                                                    o_state.s_text = '';
+                                                    f_update_o_list();
+                                                }
+                                            }
+                                        },
+                                        {
+                                            s_tag: "button",
+                                            innerText: '⚙️',
+                                            onclick:()=>{
+                                               o_state.b_show_settings = !o_state.b_show_settings;
+                                            }
+                                        },
                                     ]
-                                }   
-                            }
-                        })
+                                }
+                            },
+                        ]
                     }
                 }
             ]
@@ -878,6 +913,42 @@ document.addEventListener('keydown', (event) => {
     }
 });
 
+let f_b_network_server_connection = async function(){
+    let n_ms = window.performance.now();
+
+    try {
+        
+        let o_resp = await fetch(
+            '/serverconnectiontest', 
+            {
+                method: 'GET',
+            }
+        );
+        if(!o_resp.ok){
+            f_o_toast('there is no connection to the server!', 'error', 5000)
+        }
+        let o = await o_resp.json();
+
+        if(o?.b_success){
+            // f_o_toast('success connection server!', 'info', 5000)
+        }
+    } catch (error) {
+        // This will catch network errors like ERR_CONNECTION_REFUSED
+        if (error.message.includes('Failed to fetch') || 
+            error.message.includes('NetworkError') || 
+            error.message.includes('ERR_CONNECTION_REFUSED')) {
+            f_o_toast('There is no connection to the server!', 'error', 5000);
+        } else {
+            f_o_toast('An unexpected error occurred!', 'error', 5000);
+            console.error('Connection test error:', error);
+        }
+    }
+    setTimeout(async ()=>{
+        await f_b_network_server_connection();
+    }, o_state.n_ms_interval_server_network_connection_test)
+}
+
+f_b_network_server_connection();
 
 // Convert UUID string to ArrayBuffer
 function uuidToArrayBuffer(uuid) {
