@@ -945,6 +945,7 @@ let f_b_network_server_connection = async function(){
     }
     setTimeout(async ()=>{
         await f_b_network_server_connection();
+        await f_update_o_list();
     }, o_state.n_ms_interval_server_network_connection_test)
 }
 
