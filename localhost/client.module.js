@@ -970,7 +970,15 @@ let f_b_network_server_connection = async function(){
     }
     setTimeout(async ()=>{
         await f_b_network_server_connection();
-        await f_update_o_list();
+        
+        if(s_id){
+            let v_o_list = await f_v_o_list_from_s_id(s_id);
+            if(v_o_list != null){
+                o_state.o_list.s_id = s_id;    
+                o_state.o_list.a_o_todoitem = v_o_list.a_o_todoitem;
+            }
+        }
+
     }, o_state.n_ms_interval_server_network_connection_test)
 }
 
