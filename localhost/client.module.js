@@ -409,6 +409,7 @@ let o_state = f_o_proxified_and_add_listeners(
         s_bg_color: 'transparent', // default color
         o_todoitem: f_o_todoitem(''),
         b_show_colorpicker: false,
+        b_show_deleted: false,
         b_show_done : true, 
         o_list: {
             s_id: '',
@@ -606,6 +607,16 @@ let o = await f_o_html_from_o_js(
                                 },
                                 f_a_o: ()=>{
                                     return [
+                                        {
+                                            a_s_prop_sync: 'b_show_deleted',
+                                            s_tag: "button", 
+                                            f_s_innerText: ()=>{
+                                                return (o_state.b_show_deleted) ? 'hide deleted items': 'show deleted items'
+                                            },
+                                            onclick: (o_event)=>{
+                                                o_state.b_show_deleted = !o_state.b_show_deleted;
+                                            }
+                                        },
                                         // {
                                         //     a_s_prop_sync: 'b_show_done',
                                         //     s_tag: "button", 
@@ -725,9 +736,8 @@ let o = await f_o_html_from_o_js(
                     class: "fullpage", 
                     f_a_o: ()=>{
                         return [                            
-
                             {
-                                a_s_prop_sync: ['b_show_done', 'o_list.a_o_todoitem.[n]'],
+                                a_s_prop_sync: ['b_show_deleted', 'o_list.a_o_todoitem.[n]'],
                                 class: 'a_o_todoitem',
                                 f_a_o: ()=>{
                                     // console.log('asdfrender')
@@ -756,7 +766,7 @@ let o = await f_o_html_from_o_js(
                                     })
                                     .filter(
                                         o=>{
-                                            if(o?.b_done_final){
+                                            if(o?.b_done_final && o_state.b_show_deleted === false){
                                                 return false;
                                             }
                                             if(o_state.b_show_done){
@@ -807,8 +817,23 @@ let o = await f_o_html_from_o_js(
                                                             return (b_done) ? '✅': '◻️'
                                                         }
                                                     },
+                                                    ...[(o_state.b_show_deleted && o_todoitem.b_done_final) ? {
+                                                        s_tag: "button", 
+                                                        innerText: 'un-delete', 
+                                                        onclick: ()=>{
+                                                            let o_item = o_state.o_list.a_o_todoitem.find(
+                                                                (o_todoitem2, n_index) => {
+                                                                    return `${o_todoitem2.s_text}${o_todoitem2.n_ts_ms_created}` 
+                                                                        == `${o_todoitem.s_text}${o_todoitem.n_ts_ms_created}`;
+                                                                }
+                                                            )
+                                                            o_item.b_done_final = false;
+                                                            f_update_o_list();
+                                                        }
+
+                                                    }: null].filter(v=>v!=null),
                                                     {
-                                                        innerHTML: f_s_html_text_with_url(o_todoitem.s_text),
+                                                        innerHTML: `${(o_todoitem.b_done_final ? 'deleted - ': '')}${f_s_html_text_with_url(o_todoitem.s_text)}`,
                                                         style: `${(b_done) ? 'text-decoration: line-through;': ''}`
                                                     },
                                                     {
