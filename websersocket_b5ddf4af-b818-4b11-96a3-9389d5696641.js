@@ -95,10 +95,28 @@ let f_handler = async function(o_request){
     if(o_url.pathname == '/read'){
         let o_post_data = await o_request.json();
         // console.log(o_post_data)
-        let a_n_u8_encrypted = await o_kv.get([s_prefix, `o_list`,o_post_data.s_id_hashed]);
+        let a_a_n_u8 = [];
+        let n_len_a_n_u8 = 0;
+        let a_o_entry = await o_kv.list({prefix: [s_prefix, `o_list`,o_post_data.s_id_hashed]});
+        for await (const o_entry of a_o_entry) {
+        //   console.log(o_entry.key); // ["preferences", "ada"]
+        //   console.log(o_entry.value); // { ... }
+        //   console.log(o_entry.versionstamp); // "00000000000000010000"
+          n_len_a_n_u8 += o_entry.value.length;
+          a_a_n_u8.push(o_entry.value);
+        }
+        let a_n_u8_complete = new Uint8Array(n_len_a_n_u8);
+        let n_offset = 0;
+        for(let a_n_u8 of a_a_n_u8){
+            a_n_u8_complete.set(a_n_u8, n_offset);
+            n_offset += a_n_u8.length;
+        }
+
+        // let a_n_u8_encrypted = await o_kv.get([s_prefix, `o_list`,o_post_data.s_id_hashed]);
         // console.log(a_n_u8_encrypted);
         return new Response(
-            a_n_u8_encrypted?.value,
+            a_n_u8_complete,
+            //a_n_u8_encrypted?.value,
             { 
                 headers: {
                     'Content-type': "application/octet-stream"
@@ -130,11 +148,21 @@ let f_handler = async function(o_request){
                 a_n_u8_payload.slice(2, 2 + n_bytes_hash)
             );
             
+            
             // Remaining bytes are the encrypted data
             const a_n_u8_encrypted = a_n_u8_payload.slice(2 + n_bytes_hash);
             // console.log(a_n_u8_encrypted);
             // Store in Deno KV
-            let v_list = await o_kv.set([s_prefix, `o_list`,s_id_hashed], a_n_u8_encrypted);
+            let n_bytes_max_value = 65000;
+            let n_arrays = Math.ceil(a_n_u8_encrypted.length / n_bytes_max_value);
+            for(let n_i = 0; n_i < n_arrays; n_i++){
+                let a_n_u8_encrypted_slice = a_n_u8_encrypted.slice(
+                    n_i * n_bytes_max_value,
+                    (n_i + 1) * n_bytes_max_value
+                );
+                let v_list = await o_kv.set([s_prefix, `o_list`,s_id_hashed, n_i], a_n_u8_encrypted_slice);
+            }
+            // let v_list = await o_kv.set([s_prefix, `o_list`,s_id_hashed], a_n_u8_encrypted);
             
             return new Response(
                 JSON.stringify(
