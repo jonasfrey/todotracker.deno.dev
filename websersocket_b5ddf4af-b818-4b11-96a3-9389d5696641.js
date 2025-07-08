@@ -119,32 +119,49 @@ let f_handler = async function(o_request){
         );
     }
     if(o_url.pathname == '/write'){
-        let a_n_u8_payload = new Uint8Array(await o_request.arrayBuffer());
-        const view = new DataView(a_n_u8_payload.buffer);
-        // Read hash length (first 2 bytes)
-        const n_bytes_hash = view.getUint16(0);
-        
-        // Read hash (next N bytes)
-        const s_id_hashed = new TextDecoder().decode(
-            a_n_u8_payload.slice(2, 2 + n_bytes_hash)
-        );
-        
-        // Remaining bytes are the encrypted data
-        const a_n_u8_encrypted = a_n_u8_payload.slice(2 + n_bytes_hash);
-        // console.log(a_n_u8_encrypted);
-        // Store in Deno KV
-        let v_list = await o_kv.set([s_prefix, `o_list`,s_id_hashed], a_n_u8_encrypted);
-        
-        return new Response(
-            JSON.stringify(
-                {write: true}
-            ),
-            { 
-                headers: {
-                    'Content-type': "application/json"
+        try {
+            let a_n_u8_payload = new Uint8Array(await o_request.arrayBuffer());
+            const view = new DataView(a_n_u8_payload.buffer);
+            // Read hash length (first 2 bytes)
+            const n_bytes_hash = view.getUint16(0);
+            
+            // Read hash (next N bytes)
+            const s_id_hashed = new TextDecoder().decode(
+                a_n_u8_payload.slice(2, 2 + n_bytes_hash)
+            );
+            
+            // Remaining bytes are the encrypted data
+            const a_n_u8_encrypted = a_n_u8_payload.slice(2 + n_bytes_hash);
+            // console.log(a_n_u8_encrypted);
+            // Store in Deno KV
+            let v_list = await o_kv.set([s_prefix, `o_list`,s_id_hashed], a_n_u8_encrypted);
+            
+            return new Response(
+                JSON.stringify(
+                    {write: true}
+                ),
+                { 
+                    headers: {
+                        'Content-type': "application/json"
+                    }
                 }
-            }
-        );
+            );
+            
+        } catch (error) {
+            console.error('Error in /write:', error);
+            return new Response(
+                JSON.stringify(
+                    {error: 'Failed to write data'}
+                ),
+                { 
+                    status: 500,
+                    headers: {
+                        'Content-type': "application/json"
+                    }
+                }
+            );
+            
+        }
     }
     if(o_url.pathname == '/delete'){
         let o_post_data = await o_request.json();
