@@ -99,7 +99,7 @@ let f_handler = async function(o_request){
         let n_len_a_n_u8 = 0;
         let a_o_entry = await o_kv.list({prefix: [s_prefix, `o_list`,o_post_data.s_id_hashed]});
         for await (const o_entry of a_o_entry) {
-        //   console.log(o_entry.key); // ["preferences", "ada"]
+          console.log(o_entry.key); // ["preferences", "ada"]
         //   console.log(o_entry.value); // { ... }
         //   console.log(o_entry.versionstamp); // "00000000000000010000"
           n_len_a_n_u8 += o_entry.value.length;
