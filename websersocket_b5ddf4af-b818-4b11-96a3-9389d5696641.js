@@ -106,12 +106,20 @@ let f_handler = async function(o_request){
           a_a_n_u8.push(o_entry.value);
         }
         let a_n_u8_complete = new Uint8Array(n_len_a_n_u8);
+
         let n_offset = 0;
         for(let a_n_u8 of a_a_n_u8){
             a_n_u8_complete.set(a_n_u8, n_offset);
             n_offset += a_n_u8.length;
         }
 
+        if(a_n_u8_complete.length == 0){
+            let o_v = await o_kv.get([s_prefix, `o_list`,o_post_data.s_id_hashed]);
+            if(o_v){
+                a_n_u8_complete = o_v.value;
+            }
+        }
+        
         // let a_n_u8_encrypted = await o_kv.get([s_prefix, `o_list`,o_post_data.s_id_hashed]);
         // console.log(a_n_u8_encrypted);
         return new Response(
