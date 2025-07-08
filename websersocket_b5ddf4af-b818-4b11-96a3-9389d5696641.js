@@ -195,9 +195,16 @@ let f_handler = async function(o_request){
         let o_post_data = await o_request.json();
         // console.log(o_post_data)
         let a_v_key = [s_prefix, `o_list`,o_post_data.s_id_hashed]
-        let a_n_u8_encrypted = await o_kv.get(a_v_key);
-        if(a_n_u8_encrypted){
-            await o_kv.delete(a_v_key);
+        // let a_n_u8_encrypted = await o_kv.get(a_v_key);
+        // if(a_n_u8_encrypted){
+        //     await o_kv.delete(a_v_key);
+        // }
+        let a_o_entry = await o_kv.list({prefix:a_v_key});
+        for await (const o_entry of a_o_entry) {
+            // console.log(o_entry.key); // ["preferences", "ada"]
+            // console.log(o_entry.value); // { ... }
+            // console.log(o_entry.versionstamp); // "00000000000000010000"
+            await o_kv.delete(o_entry.key);
         }
         return new Response(
             JSON.stringify(
