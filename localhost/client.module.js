@@ -403,6 +403,8 @@ let o_state = f_o_proxified_and_add_listeners(
         n_ms_delta_max_server_network_connection_test: 1000,
         n_ms_interval_server_network_connection_test: 3333,
         n_id_interval_server_network_connection_test: null,
+        n_id_interval_list_autofetch: null, 
+        n_ms_interval_list_autofetch: 300,
         ...o_state_a_o_toast,
         b_show_settings: false,
         s_text: '',
@@ -411,8 +413,11 @@ let o_state = f_o_proxified_and_add_listeners(
         b_show_colorpicker: false,
         b_show_deleted: false,
         b_show_done : true, 
+        n_ms_autodownload_backup_interval: 24 * 60 * 60 * 1000, // every 24 hours
+        n_ms_loaded: new Date().getTime(),
         o_list: {
             s_id: '',
+            // n_ts_ms_last_downloaded_backup: new Date().getTime(),
             a_o_todoitem: [
                 f_o_todoitem('Wash the dishes'),
                 f_o_todoitem('Do the laundry'),
@@ -425,7 +430,7 @@ let o_state = f_o_proxified_and_add_listeners(
     f_callback_aftervaluechange, 
     o_div
 )
-let b_new = true;
+let b_new_list = true;
 let s_id = window.location.hash.replace('#', '');
 let f_v_o_list_from_s_id = async function(s_id){
     let s_id_hashed = await f_s_hashed_sha256(s_id);
@@ -448,16 +453,18 @@ let f_v_o_list_from_s_id = async function(s_id){
     return o_data;
 }
 if(s_id != ``){
-    b_new = false;
+    b_new_list = false;
     let v_o_list = await f_v_o_list_from_s_id(s_id);
     if(v_o_list != null){
-        o_state.o_list.s_id = s_id;    
+        o_state.o_list.s_id = s_id;   
         o_state.o_list.a_o_todoitem = v_o_list.a_o_todoitem;
+        o_state.o_list.n_ts_ms_last_downloaded_backup = v_o_list.n_ts_ms_last_downloaded_backup;
     }else{
-        b_new = true;
+        b_new_list = true;
     }
 }
-if(b_new){
+
+if(b_new_list){
     o_state.o_list.s_id = crypto.randomUUID();
     window.location.hash = o_state.o_list.s_id;
 }
@@ -538,6 +545,53 @@ let f_s_html_text_with_url = function(text, options = {}){
       return `<a href="${href}" target="_blank" rel="noopener noreferrer">${url}</a>`;
     });
 }
+let f_export_list = function(){
+     // Convert JSON object to a string
+    const jsonStr = JSON.stringify(o_state.o_list, null, 2); // 2-space indentation for readability
+
+    // Create a Blob (file-like object) with the JSON data
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+
+    // Create a temporary URL for the Blob
+    const url = URL.createObjectURL(blob);
+
+    // Create a hidden anchor element and trigger a click
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${window.location.hostname}_${o_state.o_list.s_id.substr(0, 8)}.json`;
+    document.body.appendChild(a);
+    a.click();
+
+    // Clean up
+    setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }, 100);
+}
+let b_never_backuped = false;
+if(o_state.o_list.n_ts_ms_last_downloaded_backup == null || o_state.o_list.n_ts_ms_last_downloaded_backup == undefined){
+    b_never_backuped = true;
+    if(!b_new_list){
+        o_state.o_list.n_ts_ms_last_downloaded_backup = new Date().getTime();
+    }
+}
+let n_ms_delta = Math.abs(o_state.n_ms_loaded - o_state.o_list.n_ts_ms_last_downloaded_backup);
+if(n_ms_delta > o_state.n_ms_autodownload_backup_interval || (b_never_backuped && !b_new_list)){
+    let s_message = ''
+    if(b_never_backuped){
+        s_message = 'you never downloaded a backup of this list. it is recommended to download a backup now. do you want to download a backup now? (recommended)';
+    }else{
+        s_message = `the last backup was downloaded on ${new Date(o_state.o_list.n_ts_ms_last_downloaded_backup).toLocaleString()}. it is recommended to download a backup now. do you want to download a backup now? (recommended)`
+    }
+    let b = confirm(s_message);
+    if(b){
+        f_export_list();
+    }
+    o_state.o_list.n_ts_ms_last_downloaded_backup = new Date().getTime();
+    f_update_o_list();
+}
+
+
 
 let o = await f_o_html_from_o_js(
     {
@@ -632,27 +686,7 @@ let o = await f_o_html_from_o_js(
                                             s_tag: 'button',
                                             innerText: '➡️ export list as json',
                                             onclick: ()=>{
-                                                // Convert JSON object to a string
-                                                const jsonStr = JSON.stringify(o_state.o_list, null, 2); // 2-space indentation for readability
-
-                                                // Create a Blob (file-like object) with the JSON data
-                                                const blob = new Blob([jsonStr], { type: 'application/json' });
-
-                                                // Create a temporary URL for the Blob
-                                                const url = URL.createObjectURL(blob);
-
-                                                // Create a hidden anchor element and trigger a click
-                                                const a = document.createElement('a');
-                                                a.href = url;
-                                                a.download = `${window.location.hostname}.json`;
-                                                document.body.appendChild(a);
-                                                a.click();
-
-                                                // Clean up
-                                                setTimeout(() => {
-                                                    document.body.removeChild(a);
-                                                    URL.revokeObjectURL(url);
-                                                }, 100);
+                                                f_export_list();
                                             }
                                         },
                                         {
@@ -998,4 +1032,68 @@ function uuidToArrayBuffer(uuid) {
     
     return buffer;
 }
+
+o_state.n_id_interval_list_autofetch = setInterval(
+    async ()=>{
+        let v_o_list = await f_v_o_list_from_s_id(s_id);
+        let b_something_changged = false;// check if the arrays are not the same, the arrays contain items like this
+        // a_n_ts_ms_done
+        // : 
+        // [1759756858089]
+        // b_done_final
+        // : 
+        // true
+        // n_ts_ms_created
+        // : 
+        // 1759756855612
+        // s_bg_color
+        // : 
+        // "rgba(0,0,0,1.0)"
+        // s_text
+        // : 
+        // "Wash the dishes"
+        let a_1 = o_state.o_list.a_o_todoitem;
+        let a_2 = v_o_list?.a_o_todoitem;
+
+        b_something_changged = (a_1.length != a_2?.length);
+        if(!b_something_changged){
+            for(let n_i = 0; n_i < a_1.length; n_i++){
+                let o_1 = a_1[n_i];
+                let o_2 = a_2.find(o=>{
+                    return o.s_text == o_1.s_text;
+                })
+                if(!o_2){
+                    b_something_changged = true;
+                    break;
+                }
+                if(o_1.s_text != o_2.s_text){
+                    b_something_changged = true;
+                    break;
+                }
+                if(o_1.s_bg_color != o_2.s_bg_color){
+                    b_something_changged = true;
+                    break;
+                }
+                if(o_1.b_done_final != o_2.b_done_final){
+                    b_something_changged = true;
+                    break;
+                }
+                if(o_1.n_ts_ms_created != o_2.n_ts_ms_created){
+                    b_something_changged = true;
+                    break;
+                }
+                if(o_1.a_n_ts_ms_done.length != o_2.a_n_ts_ms_done.length){
+                    b_something_changged = true;
+                    break;
+                }
+            }
+        }
+        // console.log({b_something_changged})
+        if(v_o_list != null && b_something_changged){
+            o_state.o_list.s_id = s_id;    
+            o_state.o_list.a_o_todoitem = v_o_list.a_o_todoitem;
+        }
+    },
+    o_state.n_ms_interval_list_autofetch
+)
 
