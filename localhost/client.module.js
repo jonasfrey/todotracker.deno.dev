@@ -418,12 +418,7 @@ const app = createApp({
 
 
 o_self.n_id_interval_list_autofetch = setInterval(
-    async ()=>{
-        // console.log('ival')
-        let v_o_list = await o_self.f_v_o_list_from_s_id(s_id);
-        o_self.o_list.s_id = s_id;    
-        o_self.o_list.a_o_todoitem = v_o_list.a_o_todoitem;
-    },
+    o_self.f_interval_fetch_list,
     o_self.n_ms_interval_list_autofetch
 )
 
@@ -472,6 +467,12 @@ document.addEventListener('pointerup', this.f_pointerup);
         window.removeEventListener('pointerup', this.f_pointerup);
     },
     methods: {
+        f_interval_fetch_list: async function(){
+            let o_self = this;
+            // console.log('ival')
+            let v_o_list = await o_self.f_v_o_list_from_s_id(o_self.o_list.s_id);
+            o_self.o_list.a_o_todoitem = v_o_list.a_o_todoitem;
+        },
         f_o_toast: function(s_msg){
             alert(s_msg)
         },
@@ -664,6 +665,7 @@ document.addEventListener('pointerup', this.f_pointerup);
         },
         f_update_o_list : async function(){
             let o_self = this;
+            clearInterval(o_self.n_id_interval_list_autofetch);
             // update data structure updates that changes with different git versions
             for(let o of o_self.o_list.a_o_todoitem){
                 if(!o?.b_done_final){
@@ -685,6 +687,10 @@ document.addEventListener('pointerup', this.f_pointerup);
                     body: a_n_u8_payload
                 }
             );
+            o_self.n_id_interval_list_autofetch = setInterval(
+                o_self.f_interval_fetch_list,
+                o_self.n_ms_interval_list_autofetch
+            )
             // f_o_toast('saved', 'success', 5000)
         },
 
