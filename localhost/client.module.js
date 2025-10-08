@@ -471,6 +471,9 @@ document.addEventListener('pointerup', this.f_pointerup);
     methods: {
         f_interval_fetch_list: async function(){
             let o_self = this;
+            if(o_self.b_writing){
+                return;
+            }
             // console.log('ival')
             let v_o_list = await o_self.f_v_o_list_from_s_id(o_self.o_list.s_id);
             o_self.o_list.a_o_todoitem = v_o_list.a_o_todoitem;
@@ -666,8 +669,9 @@ document.addEventListener('pointerup', this.f_pointerup);
             return buffer
         },
         f_update_o_list : async function(){
+
             let o_self = this;
-            clearInterval(o_self.n_id_interval_list_autofetch);
+            o_self.b_writing = true;
             // update data structure updates that changes with different git versions
             for(let o of o_self.o_list.a_o_todoitem){
                 if(!o?.b_done_final){
@@ -689,12 +693,8 @@ document.addEventListener('pointerup', this.f_pointerup);
                     body: a_n_u8_payload
                 }
             );
-            setTimeout(()=>{
-                o_self.n_id_interval_list_autofetch = setInterval(
-                    o_self.f_interval_fetch_list,
-                    o_self.n_ms_interval_list_autofetch
-                )
-            },1000)
+
+            o_self.b_writing = false;
             // f_o_toast('saved', 'success', 5000)
         },
 
@@ -872,7 +872,8 @@ document.addEventListener('pointerup', this.f_pointerup);
             // n_ts_ms_last_downloaded_backup: new Date().getTime(),
             a_o_todoitem: [
             ],
-        },        
+        },     
+        b_writing: false,   
         // ...o_state_a_o_toast,
     };
   }
