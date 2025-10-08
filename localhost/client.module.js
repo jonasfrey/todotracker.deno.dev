@@ -184,7 +184,9 @@ f_add_css(
     }
       
 
-
+    .a_o_todoitem {
+        padding-bottom: 5vh;
+    }
     .fullpage {
         height: 100vh;
         display:flex; 
