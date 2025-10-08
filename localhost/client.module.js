@@ -687,10 +687,12 @@ document.addEventListener('pointerup', this.f_pointerup);
                     body: a_n_u8_payload
                 }
             );
-            o_self.n_id_interval_list_autofetch = setInterval(
-                o_self.f_interval_fetch_list,
-                o_self.n_ms_interval_list_autofetch
-            )
+            setTimeout(()=>{
+                o_self.n_id_interval_list_autofetch = setInterval(
+                    o_self.f_interval_fetch_list,
+                    o_self.n_ms_interval_list_autofetch
+                )
+            },1000)
             // f_o_toast('saved', 'success', 5000)
         },
 
