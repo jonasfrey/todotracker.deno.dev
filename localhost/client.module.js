@@ -419,7 +419,7 @@ const app = createApp({
 
 o_self.n_id_interval_list_autofetch = setInterval(
     async ()=>{
-        console.log('ival')
+        // console.log('ival')
         let v_o_list = await o_self.f_v_o_list_from_s_id(s_id);
         o_self.o_list.s_id = s_id;    
         o_self.o_list.a_o_todoitem = v_o_list.a_o_todoitem;
@@ -846,7 +846,7 @@ document.addEventListener('pointerup', this.f_pointerup);
         n_ms_interval_server_network_connection_test: 3333,
         n_id_interval_server_network_connection_test: null,
         n_id_interval_list_autofetch: null, 
-        n_ms_interval_list_autofetch: 300,
+        n_ms_interval_list_autofetch: 500,
         b_show_settings: false,
         s_text: '',
         s_bg_color: 'transparent', // default color
