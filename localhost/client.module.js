@@ -6,109 +6,20 @@ import {
     f_s_css_from_o_variables
 } from "https://deno.land/x/f_add_css@2.0.0/mod.js"
 
+
+import { createApp, ref, onUpdated, reactive} from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js'
+
 import {
     f_o_html_from_o_js,
-    f_o_proxified_and_add_listeners,
-    f_o_js_a_o_toast,
-    f_o_toast,
-    o_state_a_o_toast,
-    s_css_a_o_toast
-} 
-// from "./tmp.js"
-from "https://deno.land/x/handyhelpers@5.3.6/mod.js"
+} from "https://deno.land/x/handyhelpers@5.4.2/mod.js"
 
-async function f_s_hashed_sha256(s) {
-    // Encode the string as UTF-8
-    const msgBuffer = new TextEncoder().encode(s);
-    
-    // Hash the message
-    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-    
-    // Convert to hex string
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    
-    return hashHex;
-  }
+import {
 
-
-// Encrypt JSON data
-let f_a_n_u8_encrypted_from_string = async function(jsonData, uuid) {
-    try {
-        // Convert UUID to key material
-        const keyMaterial = await crypto.subtle.importKey(
-            'raw',
-            uuidToArrayBuffer(uuid),
-            { name: 'AES-CBC' },
-            false,
-            ['encrypt']
-        );
-        
-        // Generate IV (recommended to be random and stored with ciphertext)
-        const iv = crypto.getRandomValues(new Uint8Array(16));
-        
-        // Convert JSON to string then to ArrayBuffer
-        const encoder = new TextEncoder();
-        const data = encoder.encode(JSON.stringify(jsonData));
-        
-        // Encrypt the data
-        const ciphertext = await crypto.subtle.encrypt(
-            {
-                name: 'AES-CBC',
-                iv: iv
-            },
-            keyMaterial,
-            data
-        );
-        
-        // Combine IV and ciphertext for storage/transmission
-        const result = new Uint8Array(iv.length + ciphertext.byteLength);
-        result.set(iv, 0);
-        result.set(new Uint8Array(ciphertext), iv.length);
-        
-        return result;
-    } catch (e) {
-        console.error('Encryption error:', e);
-        throw e;
-    }
-}
-
-// Decrypt data back to JSON
-let f_s_dectrypted_from_a_n_u8 = async function(encryptedData, uuid) {
-    try {
-        // Split IV and ciphertext
-        const iv = encryptedData.slice(0, 16);
-        const ciphertext = encryptedData.slice(16);
-        
-        // Convert UUID to key material
-        const keyMaterial = await crypto.subtle.importKey(
-            'raw',
-            uuidToArrayBuffer(uuid),
-            { name: 'AES-CBC' },
-            false,
-            ['decrypt']
-        );
-        
-        // Decrypt the data
-        const decrypted = await crypto.subtle.decrypt(
-            {
-                name: 'AES-CBC',
-                iv: iv
-            },
-            keyMaterial,
-            ciphertext
-        );
-        
-        // Convert back to JSON
-        const decoder = new TextDecoder();
-        return decoder.decode(decrypted);
-    } catch (e) {
-        console.error('Decryption error:', e);
-        throw e;
-    }
-}
-
-
+    f_o_todoitem, 
+    f_s_hashed_sha256,
+    f_s_dectrypted_from_a_n_u8,
+    f_a_n_u8_encrypted_from_string
+} from './functions.module.js'
 
 
 // import { Boolean } from '/three.js-r126/examples/jsm/math/BooleanOperation.js';
@@ -120,7 +31,6 @@ o_variables.n_rem_font_size_base = 1. // adjust font size, other variables can a
 o_variables.n_rem_padding_interactive_elements = 0.5; // adjust padding for interactive elements 
 f_add_css(
     `
-    ${s_css_a_o_toast}
     #${s_id_error_msg}{
         position: absolute;
         width: 100%;
@@ -130,12 +40,17 @@ f_add_css(
         padding: 1rem;
         z-index: 111;
     }
-    .app{
+    #app{
         max-width: 100vw;
         style: "display: flex;
         flex-direction: row;
         
         background-size:cover;
+    }
+    .inputs {
+        position: fixed;
+        bottom: 0;
+        z-index: 111;
     }
     h2{
         margin-bottom: 2rem !important;
@@ -268,10 +183,7 @@ f_add_css(
 
     }
       
-    .a_o_todoitem {
-        max-height: 95vh !important;!i;!;
-        overflow-y: scroll;
-    }
+
 
     .fullpage {
         height: 100vh;
@@ -280,7 +192,6 @@ f_add_css(
         padding: .5rem;
         box-sizing: border-box;
     }
-    ${s_css_a_o_toast}
     ${
         f_s_css_from_o_variables(
             o_variables
@@ -290,810 +201,685 @@ f_add_css(
 );
 
 
-
-
-let f_callback_beforevaluechange = function(a_s_path, v_old, v_new){
-    // console.log('a_s_path')
-    // console.log(a_s_path)
-    // let s_path = a_s_path.join('.');
-    // if(s_path == 'a_o_person.0.s_name'){
-    //     console.log('name of first person will be changed')
-    // }
-}
-let f_callback_aftervaluechange = function(a_s_path, v_old, v_new){
-    // console.log('a_s_path')
-    // console.log(a_s_path)
-    // let s_path = a_s_path.join('.');
-    // if(s_path == 'n_thickness'){
-    //     f_update_rendering();
-    // }
-}
-
 let o_div = document;
 let o_blob_stl = null;
 // let a_o_license = await(await fetch('https://api.sketchfab.com/v3/licenses')).json()
 // let a_o_category = await(await(fetch('https://api.sketchfab.com/v3/categories'))).json()
 
-function f_s_error_from_s_prop_value(s_prop, value) {
-    if (typeof s_prop !== 'string') {
-      return ('s_prop must be a string');
-    }
-    if (s_prop.startsWith('s_')) {
-      if (typeof value !== 'string') {
-        return (`Value for s_prop '${s_prop}' must be a string`);
-      }
-    } else if (s_prop.startsWith('n_')) {
-      if (typeof value !== 'number' || isNaN(value)) {
-        return (`Value for s_prop '${s_prop}' must be a number`);
-      }
-    } else if (s_prop.startsWith('a_')) {
-      if (!Array.isArray(value)) {
-        return (`Value for s_prop '${s_prop}' must be an array`);
-      }
-    } else if (s_prop.startsWith('b_')) {
-      if (typeof value !== 'boolean') {
-        return (`Value for s_prop '${s_prop}' must be a boolean`);
-      }
-    } else if (s_prop.startsWith('o_')) {
-      if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-        return (`Value for s_prop '${s_prop}' must be an object`);
-      }
-    }
-    else if (s_prop.startsWith('v_')) {
-        if (typeof value === 'undefined') {
-          return (`Value for s_prop '${s_prop}' must be anything but undefined`);
-        }
-      } else {
-      return (`s_prop '${s_prop}' has no recognized prefix`);
-    }
-  
-    return '';
-  }
-  
-
-let f_a_o_error_type = function(
-    o
-){
-    let a_o_error = []
-    for(let s_prop in o){
-        let s = f_s_error_from_s_prop_value(
-            s_prop, 
-            o[s_prop]
-        );
-        if(s != ''){
-            a_o_error.push(
-                {
-                    s, 
-                    s_prop, 
-                    value: o[s_prop]
-                }
-            )
-        }
-    }
-    return a_o_error
-}
-let f_o_check_types_and_potentially_throw_error = function(
-    o
-){
-    let a_o_error = f_a_o_error_type(o);
-    if(a_o_error.length > 0){
-        throw new Error(`object has type error(s): ${JSON.stringify(a_o_error, null, 4)}`);
-    }
-    return o
-
-}
-let f_o_todoitem = function(
-    s_text,
-    n_ts_ms_created = Date.now(), 
-    b_done_final = false,
-    s_bg_color = 'rgba(0,0,0,1.0)',
-    a_n_ts_ms_done = []
-){
-    return f_o_check_types_and_potentially_throw_error({
-        s_text, 
-        n_ts_ms_created, 
-        s_bg_color,
-        a_n_ts_ms_done
-    });
-
-}
-
-let o_state = f_o_proxified_and_add_listeners(
-    {
-        n_ms_delta_max_server_network_connection_test: 1000,
-        n_ms_interval_server_network_connection_test: 3333,
-        n_id_interval_server_network_connection_test: null,
-        n_id_interval_list_autofetch: null, 
-        n_ms_interval_list_autofetch: 300,
-        ...o_state_a_o_toast,
-        b_show_settings: false,
-        s_text: '',
-        s_bg_color: 'transparent', // default color
-        o_todoitem: f_o_todoitem(''),
-        b_show_colorpicker: false,
-        b_show_deleted: false,
-        b_show_done : true, 
-        n_ms_autodownload_backup_interval: 24 * 60 * 60 * 1000, // every 24 hours
-        n_ms_loaded: new Date().getTime(),
-        o_list: {
-            s_id: '',
-            // n_ts_ms_last_downloaded_backup: new Date().getTime(),
-            a_o_todoitem: [
-                f_o_todoitem('Wash the dishes'),
-                f_o_todoitem('Do the laundry'),
-                f_o_todoitem('Go grocery shopping'),
-            ],
-        },        
-        // ...o_state_a_o_toast,
-    }, 
-    f_callback_beforevaluechange,
-    f_callback_aftervaluechange, 
-    o_div
-)
-let b_new_list = true;
-let s_id = window.location.hash.replace('#', '');
-let f_v_o_list_from_s_id = async function(s_id){
-    let s_id_hashed = await f_s_hashed_sha256(s_id);
-    let o_resp = await fetch(
-        '/read', 
-        {
-            method: 'POST',
-            body: JSON.stringify(
-                {s_id_hashed}
-            )
-        }
-    );
-
-    let a_n_u8_encrypted = new Uint8Array(await o_resp.arrayBuffer());
-    if(a_n_u8_encrypted.length == 0){
-        return null;
-    }
-    const s_json_decrypted = await f_s_dectrypted_from_a_n_u8(new Uint8Array(a_n_u8_encrypted), s_id);
-    let o_data = JSON.parse(s_json_decrypted);
-    return o_data;
-}
-if(s_id != ``){
-    b_new_list = false;
-    let v_o_list = await f_v_o_list_from_s_id(s_id);
-    if(v_o_list != null){
-        o_state.o_list.s_id = s_id;   
-        o_state.o_list.a_o_todoitem = v_o_list.a_o_todoitem;
-        o_state.o_list.n_ts_ms_last_downloaded_backup = v_o_list.n_ts_ms_last_downloaded_backup;
-    }else{
-        b_new_list = true;
-    }
-}
-
-if(b_new_list){
-    o_state.o_list.s_id = crypto.randomUUID();
-    window.location.hash = o_state.o_list.s_id;
-}
-
-
-globalThis.o_state = o_state
-
-// globalThis.f_o_toast = f_o_toast
-let o_el_svg = null;
-// then we build the html
-// f_o_toast('this is info', 'info', 5000)
-// f_o_toast('this is warning','warning', 5000)
-// f_o_toast('this is error','error', 5000)
-// f_o_toast('this will take a while','loading', 5000)
-
-let f_a_n_u8_payload = async function(
-    o_data,
-    s_id
-){
-    let a_n_u8_encrypted = await f_a_n_u8_encrypted_from_string(
-        o_data, 
-        s_id // encrypt with the id
-    )
-    const encoder = new TextEncoder();
-    let s_id_hashed = await f_s_hashed_sha256(s_id); // hash the id
-    const a_n_u8_hashed_id = encoder.encode(s_id_hashed);
-
-    // Create a single ArrayBuffer with:
-    // - 2 bytes for hash length (Uint16)
-    // - N bytes for hash
-    // - Remaining bytes for encrypted data
-    let n_bytes_hash = 2;
-    const buffer = new Uint8Array(n_bytes_hash + a_n_u8_hashed_id.length + a_n_u8_encrypted.length);
-    const view = new DataView(buffer.buffer);
-  
-    // Write hash length (2 bytes)
-    view.setUint16(0, a_n_u8_hashed_id.length);
-  
-    // Write hash bytes
-    buffer.set(a_n_u8_hashed_id, n_bytes_hash);
-  
-    // Write encrypted data
-    buffer.set(a_n_u8_encrypted, n_bytes_hash + a_n_u8_hashed_id.length);
-  
-    return buffer
-}
-let f_update_o_list = async function(){
-
-    // update data structure updates that changes with different git versions
-    for(let o of o_state.o_list.a_o_todoitem){
-        if(!o?.b_done_final){
-            o.b_done_final = false;
-        }
-    }
-    let a_n_u8_payload = await f_a_n_u8_payload(
-        o_state.o_list,
-        o_state.o_list.s_id
-    )
-    let o_resp = await fetch(
-        '/write', 
-        {
-            method: 'POST',
-            'Content-Type': 'application/octet-stream', // Important for binary data
-            body: a_n_u8_payload
-        }
-    );
-    // f_o_toast('saved', 'success', 5000)
-}
-
-let f_s_html_text_with_url = function(text, options = {}){
-    // return text
-    // const urlRegex = /(?:https?:\/\/)?(?:www\.)?[^\s<>"']+\.[^\s<>"']+/gi;
-    // let urlRegex = /\bhttps?:\/\/[^\s<>"']+/gi;
-    let urlRegex = /\b(?:https?:\/\/[^\s<>"']+|(?:[a-z0-9\-]+\.)+[a-z]{2,}(?::\d+)?(?:\/[^\s<>"']*)?)/gi;
-
-    return text.replace(urlRegex, url => {
-      const href = url.startsWith('http') ? url : 'http://' + url;
-      return `<a href="${href}" target="_blank" rel="noopener noreferrer">${url}</a>`;
-    });
-}
-let f_export_list = function(){
-     // Convert JSON object to a string
-    const jsonStr = JSON.stringify(o_state.o_list, null, 2); // 2-space indentation for readability
-
-    // Create a Blob (file-like object) with the JSON data
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-
-    // Create a temporary URL for the Blob
-    const url = URL.createObjectURL(blob);
-
-    // Create a hidden anchor element and trigger a click
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${window.location.hostname}_${o_state.o_list.s_id.substr(0, 8)}.json`;
-    document.body.appendChild(a);
-    a.click();
-
-    // Clean up
-    setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    }, 100);
-}
-let b_never_backuped = false;
-if(o_state.o_list.n_ts_ms_last_downloaded_backup == null || o_state.o_list.n_ts_ms_last_downloaded_backup == undefined){
-    b_never_backuped = true;
-    if(!b_new_list){
-        o_state.o_list.n_ts_ms_last_downloaded_backup = new Date().getTime();
-    }
-}
-let n_ms_delta = Math.abs(o_state.n_ms_loaded - o_state.o_list.n_ts_ms_last_downloaded_backup);
-if(n_ms_delta > o_state.n_ms_autodownload_backup_interval || (b_never_backuped && !b_new_list)){
-    let s_message = ''
-    if(b_never_backuped){
-        s_message = 'you never downloaded a backup of this list. it is recommended to download a backup now. do you want to download a backup now? (recommended)';
-    }else{
-        s_message = `the last backup was downloaded on ${new Date(o_state.o_list.n_ts_ms_last_downloaded_backup).toLocaleString()}. it is recommended to download a backup now. do you want to download a backup now? (recommended)`
-    }
-    let b = confirm(s_message);
-    if(b){
-        f_export_list();
-    }
-    o_state.o_list.n_ts_ms_last_downloaded_backup = new Date().getTime();
-    f_update_o_list();
-}
-
-
 
 let o = await f_o_html_from_o_js(
     {
-        class: "app",
-        f_a_o: ()=>{
-            return [
-                f_o_js_a_o_toast(o_state),
+        id: "app",
+        a_o: [
+
                 {
 
                     s_tag: 'a',
                     href: 'https://buymeacoffee.com/jonasimmanuelfrey',
-                    f_s_style:()=>{return "position:fixed; top:0; right:0; z-index: 100;max-width:100px; background:rgba(0,0,0,0.5);"},
-                    f_a_o: ()=>{
-                        return [
+                    ":style": "`position:fixed; top:0; right:0; z-index: 100;max-width:100px; background:rgba(0,0,0,0.5);`",
+                    a_o: [
                             {
                                 style: 'width: 100%;padding:0;',
                                 s_tag: "img",
                                 src: './bmc-button.png',
                             }
                         ]
-                    }
                 },
 
                 {
-                    a_s_prop_sync: ['b_show_colorpicker'],
-                    f_b_render: ()=>{
-                        return o_state.b_show_colorpicker;
-                    }, 
-                    f_a_o: ()=>{
-                        return [
+                    'v-if': "b_show_colorpicker",
+                    a_o: 
+                         [
 
                             {
                                 class: 'colorpicker',
-                                onclick: (o_event)=>{
-                                    o_state.b_show_colorpicker = false;
-                                },
-                                f_a_o: ()=>{
-                                    return ['red', 'green', 'blue', 'yellow', 'purple', 'orange'].map(s=>{
-                                        return {
-                                            class: 'o_button',
-                                            style: `background: ${s};`,
-                                            onclick: ()=>{
-                                                o_state.b_show_colorpicker = false;
-                                                o_state.o_todoitem.s_bg_color = s;
-                                                o_state.s_bg_color = s;
-                                                f_update_o_list();
-                                            }
-                                        }
-                                    })
-                                }
+                                'v-on:click': 'b_show_colorpicker = false',
+                                a_o: [
+                                    {
+                                        'v-for': "s in a_s_color",
+                                        class: 'o_button',
+                                        ":style": '`background: ${s};`',
+                                        'v-on:click': 'f_update_colorpicker(s)',
+                                    }
+                                ]
+                                
                             }
                         ]
                         
-                    }
+                    
                 },
                 {
-                    a_s_prop_sync: ['b_show_settings'],
-                    f_b_render: ()=>{
-                        return o_state.b_show_settings;
-                    }, 
-                    f_a_o: ()=>{
-                        return [
+                    'v-if': "b_show_settings",
+                    a_o: [
                             {
                                 class: 'colorpicker',
-                                onclick: (o_event)=>{
-                                    o_state.b_show_settings = false;
-                                },
-                                f_a_o: ()=>{
-                                    return [
+                                'v-on:click': 'b_show_settings = false',
+                                a_o: [
                                         {
                                             a_s_prop_sync: 'b_show_deleted',
                                             s_tag: "button", 
-                                            f_s_innerText: ()=>{
-                                                return (o_state.b_show_deleted) ? 'hide deleted items': 'show deleted items'
-                                            },
-                                            onclick: (o_event)=>{
-                                                o_state.b_show_deleted = !o_state.b_show_deleted;
-                                            }
+                                            "v-html": "b_show_deleted ? 'hide deleted items': 'show deleted items'",
+                                            'v-on:click': 'b_show_deleted = !b_show_deleted',
                                         },
-                                        // {
-                                        //     a_s_prop_sync: 'b_show_done',
-                                        //     s_tag: "button", 
-                                        //     f_s_innerText: ()=>{
-                                        //         return (o_state.b_show_done) ? 'hide done': 'show done'
-                                        //     },
-                                        //     onclick: (o_event)=>{
-                                        //         o_state.b_show_done = !o_state.b_show_done;
-                                        //     }
-                                        // },
+                                     
                                         {
                                             class: 'o_button',
                                             s_tag: 'button',
                                             innerText: '➡️ export list as json',
-                                            onclick: ()=>{
-                                                f_export_list();
-                                            }
+                                            'v-on:click': 'f_export_list()',
+                                            
                                         },
                                         {
                                             class: 'o_button',
                                             s_tag: 'button',
                                             innerText: '⬅️ import list from json',
-                                            onclick: ()=>{
-                                                // Create a file input element
-                                                const input = document.createElement('input');
-                                                input.type = 'file';
-                                                input.accept = '.json'; // Accept only JSON files
+                                            'v-on:click': 'f_import_list()',
 
-                                                // Trigger the file input click
-                                                input.click();
-
-                                                // Handle the file selection
-                                                input.onchange = async (event) => {
-                                                    const file = event.target.files[0];
-                                                    if (file) {
-                                                        const reader = new FileReader();
-                                                        reader.onload = async (e) => {
-                                                            try {
-                                                                const o_list = JSON.parse(e.target.result);
-                                                                if(!f_b_UUIDv4(o_list?.s_id)){
-                                                                    alert(`json must have following structure: {s_id: 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx', a_o_todoitem: [${JSON.stringify(f_o_todoitem('testitem'))}]}`);
-                                                                    throw new Error('s_id is not a valid UUIDv4');
-                                                                }
-                                                                let v_o_list = await f_v_o_list_from_s_id(s_id);
-                                                                if(v_o_list != null){
-                                                                    let b = confirm(`a list with the id ${s_id} already exists. overwrite existing list?`);
-                                                                    if(!b){
-                                                                        return;
-                                                                    }
-                                                                }
-                                                                o_state.o_list = o_list;
-                                                                f_update_o_list();
-                                                                window.location.hash = `#${o_list.s_id}`;
-                                                            } catch (error) {
-                                                                console.error('Error parsing JSON:', error);
-                                                            }
-                                                        };
-                                                        reader.readAsText(file);
-                                                    }
-                                                };
-                                            }
                                         }, 
                                         {
                                             class: 'o_button',
                                             s_tag: 'button',
                                             innerText: '❌ delete list (ireversable)',
-                                            onclick: async ()=>{
-                                                let b = confirm(`do you really want to delete this list? this cannot be undone!`);
-                                                if(!b){
-                                                    return;
-                                                }
+                                            'v-on:click': 'f_delete_list()',
+                                        },
 
-                                                o_state.o_list.a_o_todoitem = [];
-                                               
-                                                let s_id_hashed = await f_s_hashed_sha256(o_state.o_list.s_id);
-                                                let o_resp = await fetch(
-                                                    '/delete', 
-                                                    {
-                                                        method: 'POST',
-                                                        body: JSON.stringify(
-                                                            {s_id_hashed}
-                                                        )
-                                                    }
-                                                );
-                                                console.log(o_resp.json())
-                                            }
-                                        }, 
-                                       
                                     ]
                                 }
-                            }
+                            
                         ]
                         
-                    }
+                    
                 },
                 {
                     class: "fullpage", 
-                    f_a_o: ()=>{
-                        return [                            
-                            {
-                                a_s_prop_sync: ['b_show_deleted', 'o_list.a_o_todoitem.[n]'],
-                                class: 'a_o_todoitem',
-                                f_a_o: ()=>{
-                                    // console.log('asdfrender')
-                                    return o_state.o_list.a_o_todoitem
-                                    .toSorted((a, b) => {
-                                          // Get the last timestamp for each item (determines current status)
-                                        const aLastTimestamp = a.a_n_ts_ms_done[a.a_n_ts_ms_done.length - 1] || 0;
-                                        const bLastTimestamp = b.a_n_ts_ms_done[b.a_n_ts_ms_done.length - 1] || 0;
-                                        
-                                        // Determine status: even length = done, odd length = undone
-                                        const aIsDone = a.a_n_ts_ms_done.length % 2 === 0;
-                                        const bIsDone = b.a_n_ts_ms_done.length % 2 === 0;
-                                        
-                                        // First sort by status (UNDONE first, DONE second)
-                                        if (aIsDone && !bIsDone) return -1;   // a is done, b is undone → b comes first
-                                        if (!aIsDone && bIsDone) return 1;  // a is undone, b is done → a comes first
-                                        
-                                        // If same status, sort by timestamp (newest first)
-                                        if (aIsDone) {
-                                            // Both are done → sort by original completion time (newest done first)
-                                            return b.a_n_ts_ms_done[0] - a.a_n_ts_ms_done[0];
-                                        } else {
-                                            // Both are undone → sort by last undone time (newest undone first)
-                                            return bLastTimestamp - aLastTimestamp;
-                                        }
-                                    })
-                                    .filter(
-                                        o=>{
-                                            if(o?.b_done_final && o_state.b_show_deleted === false){
-                                                return false;
-                                            }
-                                            if(o_state.b_show_done){
-                                                return true;
-                                            }
-                                            return o.a_n_ts_ms_done?.at(-1) == null;
-                                        }
-                                    )
-                                    .map(o_todoitem=>{
-                                        // console.log(o_todoitem)
-                                        return {
-                                            class: 'o_todoitem',
-                                            a_s_prop_sync: ['o_list.a_o_todoitem'],
-                                            f_a_o: ()=>{
-                                                let b_done = o_todoitem.a_n_ts_ms_done.length%2 == 1
-                                                return [
-                                                    {
-                                                        s_tag: "button", 
-                                                        innerText: '🗑️', 
-                                                        onclick: ()=>{
-                                                            let o_item = o_state.o_list.a_o_todoitem.find(
-                                                                (o_todoitem2, n_index) => {
-                                                                    return `${o_todoitem2.s_text}${o_todoitem2.n_ts_ms_created}` 
-                                                                        == `${o_todoitem.s_text}${o_todoitem.n_ts_ms_created}`;
-                                                                }
-                                                            )
-                                                            o_item.b_done_final = true;
-                                                            if(!b_done){
-                                                                o_item.a_n_ts_ms_done.push(Date.now());
-                                                            }
-                                                            f_update_o_list();
-                                                        }
-                                                    },
-                                                    {
-                                                        s_tag: 'button',
-                                                        class: 'o_button',
-                                                        onclick: ()=>{
-                                                            let o_item = o_state.o_list.a_o_todoitem.find(
-                                                                (o_todoitem2, n_index) => {
-                                                                    return `${o_todoitem2.s_text}${o_todoitem2.n_ts_ms_created}` 
-                                                                        == `${o_todoitem.s_text}${o_todoitem.n_ts_ms_created}`;
-                                                                }
-                                                            )
-                                                            o_item.a_n_ts_ms_done.push(Date.now());
-                                                            f_update_o_list();
-                                                        },
-                                                        f_s_innerText: ()=>{
-                                                            return (b_done) ? '✅': '◻️'
-                                                        }
-                                                    },
-                                                    ...[(o_state.b_show_deleted && o_todoitem.b_done_final) ? {
-                                                        s_tag: "button", 
-                                                        innerText: 'un-delete', 
-                                                        onclick: ()=>{
-                                                            let o_item = o_state.o_list.a_o_todoitem.find(
-                                                                (o_todoitem2, n_index) => {
-                                                                    return `${o_todoitem2.s_text}${o_todoitem2.n_ts_ms_created}` 
-                                                                        == `${o_todoitem.s_text}${o_todoitem.n_ts_ms_created}`;
-                                                                }
-                                                            )
-                                                            o_item.b_done_final = false;
-                                                            f_update_o_list();
-                                                        }
+                        a_o:[                            
+                                {
 
-                                                    }: null].filter(v=>v!=null),
-                                                    {
-                                                        innerHTML: `${(o_todoitem.b_done_final ? 'deleted - ': '')}${f_s_html_text_with_url(o_todoitem.s_text)}`,
-                                                        style: `${(b_done) ? 'text-decoration: line-through;': ''}`
-                                                    },
-                                                    {
-                                                        s_tag: 'button',
-                                                        class: 'o_button bgcolor',
-                                                        style: `background: ${o_todoitem.s_bg_color};`,
-                                                        onclick: ()=>{
-                                                            o_state.o_todoitem = o_todoitem;
-                                                            o_state.b_show_colorpicker = true;
-                                                            // console.log(o_todoitem)
+                                    class: 'a_o_todoitem',
+                                    a_o: [
+                                            {
+                                            'v-for': 'o_todoitem1 in a_o_todoitem_sorted_filtered',
+                                            ":key": "o_todoitem1.s_uuid",
+                                                class: 'o_todoitem',
+                                                a_o: [
+
+                                                        {
+                                                            s_tag: "button", 
+                                                            innerText: '🗑️', 
+                                                            'v-on:click': "f_delete_item(o_todoitem1)",
                                                             
-                                                        }
-                                                    }, 
-                                                ]
-                                            }   
-                                        }
-                                    })
-                                }
-                            }, 
-                            {
-                                class: "inputs", 
-                                f_a_o: ()=>{
-                                    return [
-                                        
-                                        {
-                                            s_tag: "input", 
-                                            type: 'text', 
-                                            a_s_prop_sync: ['s_text'],
-                                            onkeydown: (o_event)=>{
-                                                let s_text = o_event.target.value;
-                                                //if key is entered, add todoitem
-                                                if(o_event.key == 'Enter'){
-                                                    if(s_text != ''){
-                                                        o_state.o_list.a_o_todoitem.push(
-                                                            f_o_todoitem(s_text)
-                                                        );
-                                                        o_state.s_text = '';
-                                                        f_update_o_list();
-                                                    }
-                                                }
+                                                        },
+                                                        {
+                                                            s_tag: 'button',
+                                                            class: 'o_button',
+                                                            'v-on:click': "f_doneundone_todoitem(o_todoitem1)",
+                                                            'v-html': "(f_b_done(o_todoitem1)) ? '✅': '◻️'",
+                                                        },
+                                                        {
+                                                            'v-if': 'b_show_deleted && o_todoitem1?.b_done_final',
+                                                            s_tag: "button", 
+                                                            innerText: 'un-delete', 
+                                                            'v-on:click': "f_undelete_item(o_todoitem1)",
+
+                                                        },
+                                                        {
+                                                            'v-html': "`${(o_todoitem1?.b_done_final ? 'deleted - ': '')}${f_s_html_text_with_url(o_todoitem1?.s_text)}`",
+                                                            ':style': `(f_b_done(o_todoitem1)) ? 'text-decoration: line-through;': ''`,
+                                                        },
+                                                        {
+                                                            s_tag: 'button',
+                                                            class: 'o_button bgcolor',
+                                                            ':style': "`background: ${o_todoitem1?.s_bg_color};`",
+                                                            'v-on:click': "s_uuid_selected = o_todoitem1?.s_uuid; b_show_colorpicker = true",
+                                                        }, 
+                                                    ]
                                             }
-                                        },
-                                        {
-                                            s_tag: 'button',
-                                            class: 'o_button bgcolor',
-                                            a_s_prop_sync: ['s_bg_color'],
-                                            f_s_style:()=>{ 
-                                                return `background-color: ${o_state.s_bg_color};padding: 1rem;`
-                                            },
-            
-                                            onclick: ()=>{
-                                                o_state.b_show_colorpicker = true;
-                                                // console.log(o_todoitem)
-                                            }
-                                        }, 
-                                        {
-                                            s_tag: "button",
-                                            innerText: 'add',
-                                            onclick:()=>{
-                                                if(o_state.s_text != ''){
-                                                    let o_todoitem = f_o_todoitem(o_state.s_text);
-                                                    o_todoitem.s_bg_color = o_state.s_bg_color;
-                                                    o_state.o_list.a_o_todoitem.push(
-                                                        o_todoitem
-                                                    );
-                                                    o_state.s_text = '';
-                                                    f_update_o_list();
-                                                }
-                                            }
-                                        },
-                                        {
-                                            s_tag: "button",
-                                            innerText: '⚙️',
-                                            onclick:()=>{
-                                               o_state.b_show_settings = !o_state.b_show_settings;
-                                            }
-                                        },
-                                    ]
-                                }
-                            },
-                        ]
-                    }
-                }
+                                        ]
+                                    }
+                            ]
+             
+                },
+                {
+                    class: "inputs", 
+                    a_o: [
+
+                        {
+                            s_tag: "input", 
+                            type: 'text', 
+                            'v-model': 's_text',
+                            'v-on:keydown': "if($event.key === 'Enter' && s_text !== '') { f_add_todoitem(); }",
+
+                        },
+                        // {
+                        //     s_tag: 'button',
+                        //     class: 'o_button bgcolor',
+                        //     ":style": "`background: ${s_bg_color};`",
+                        //     'v-on:click': "b_show_colorpicker = true",
+                        // },
+                        {
+                            s_tag: "button",
+                            innerText: 'add',
+                            'v-on:click': "f_add_todoitem()",
+                            
+                        },
+                        {
+                            s_tag: "button",
+                            innerText: '⚙️',
+                            'v-on:click': "b_show_settings = !b_show_settings",
+                        },
+                    ]
+        
+                },
             ]
-        },
-    }, 
-    o_state
-)
+    }
+);
 document.body.appendChild(o);
 
 
-let f_b_UUIDv4 = function(s_uuid) {
-    return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s_uuid);
-}
 
-document.addEventListener('keydown', (event) => {
-        
-    if (event.key === 'Escape') {
-        if(o_state.b_show_colorpicker){
-            o_state.b_show_colorpicker = false;
-        }
+
+
+const app = createApp({
+    // $nextTick: () => {
+    //     debugger
+    // // Runs after the DOM has updated
+    // // this.accessRenderedElement()
+    // },
+    async mounted() {
+            let o_self = this;
+            globalThis.o_self = this;
+            globalThis.o_self = this;
+            o_self.o_video = null;
+
+            let b_new_list = true;
+            let s_id = window.location.hash.replace('#', '');
+
+            if(s_id != ``){
+    b_new_list = false;
+    let v_o_list = await o_self.f_v_o_list_from_s_id(s_id);
+    if(v_o_list != null){
+        o_self.o_list.s_id = s_id;   
+        o_self.o_list.a_o_todoitem = reactive(v_o_list.a_o_todoitem);
+        o_self.o_list.n_ts_ms_last_downloaded_backup = v_o_list.n_ts_ms_last_downloaded_backup;
+    }else{
+        b_new_list = true;
     }
-});
 
-let f_b_network_server_connection = async function(){
-    let n_ms = window.performance.now();
-
-    try {
-        
-        let o_resp = await fetch(
-            '/serverconnectiontest', 
-            {
-                method: 'GET',
+    document.addEventListener('keydown', (event) => {
+            
+        if (event.key === 'Escape') {
+            if(o_self.b_show_colorpicker){
+                o_self.b_show_colorpicker = false;
             }
-        );
-        if(!o_resp.ok){
-            f_o_toast('there is no connection to the server!', 'error', 5000)
         }
-        let o = await o_resp.json();
 
-        if(o?.b_success){
-            // f_o_toast('success connection server!', 'info', 5000)
-        }
-    } catch (error) {
-        // This will catch network errors like ERR_CONNECTION_REFUSED
-        if (error.message.includes('Failed to fetch') || 
-            error.message.includes('NetworkError') || 
-            error.message.includes('ERR_CONNECTION_REFUSED')) {
-            f_o_toast('There is no connection to the server!', 'error', 5000);
-        } else {
-            f_o_toast('An unexpected error occurred!', 'error', 5000);
-            console.error('Connection test error:', error);
-        }
-    }
-    setTimeout(async ()=>{
-        await f_b_network_server_connection();
         
-        // if(s_id){
-        //     let v_o_list = await f_v_o_list_from_s_id(s_id);
-        //     if(v_o_list != null){
-        //         o_state.o_list.s_id = s_id;    
-        //         o_state.o_list.a_o_todoitem = v_o_list.a_o_todoitem;
-        //     }
-        // }
+    });
 
-    }, o_state.n_ms_interval_server_network_connection_test)
-}
 
-f_b_network_server_connection();
-
-// Convert UUID string to ArrayBuffer
-function uuidToArrayBuffer(uuid) {
-    // Remove hyphens and convert to hex string
-    const hex = uuid.replace(/-/g, '');
-    const buffer = new ArrayBuffer(16);
-    const view = new DataView(buffer);
-    
-    // Parse hex string into ArrayBuffer
-    for (let i = 0; i < 16; i++) {
-        view.setUint8(i, parseInt(hex.substr(i * 2, 2), 16));
-    }
-    
-    return buffer;
-}
-
-o_state.n_id_interval_list_autofetch = setInterval(
+o_self.n_id_interval_list_autofetch = setInterval(
     async ()=>{
-        let v_o_list = await f_v_o_list_from_s_id(s_id);
-        let b_something_changged = false;// check if the arrays are not the same, the arrays contain items like this
-        // a_n_ts_ms_done
-        // : 
-        // [1759756858089]
-        // b_done_final
-        // : 
-        // true
-        // n_ts_ms_created
-        // : 
-        // 1759756855612
-        // s_bg_color
-        // : 
-        // "rgba(0,0,0,1.0)"
-        // s_text
-        // : 
-        // "Wash the dishes"
-        let a_1 = o_state.o_list.a_o_todoitem;
-        let a_2 = v_o_list?.a_o_todoitem;
+        console.log('ival')
+        let v_o_list = await o_self.f_v_o_list_from_s_id(s_id);
+        o_self.o_list.s_id = s_id;    
+        o_self.o_list.a_o_todoitem = v_o_list.a_o_todoitem;
+    },
+    o_self.n_ms_interval_list_autofetch
+)
 
-        b_something_changged = (a_1.length != a_2?.length);
-        if(!b_something_changged){
-            for(let n_i = 0; n_i < a_1.length; n_i++){
-                let o_1 = a_1[n_i];
-                let o_2 = a_2.find(o=>{
-                    return o.s_text == o_1.s_text;
-                })
-                if(!o_2){
-                    b_something_changged = true;
-                    break;
+
+
+}
+
+if(b_new_list){
+    o_self.o_list.s_id = crypto.randomUUID();
+    window.location.hash = o_self.o_list.s_id;
+    o_self.o_list.a_o_todoitem.push(
+        reactive(
+            f_o_todoitem('this is your first todo item. click the square to mark it as done. click the trash can to delete it. click the color button to change its color. add more items with the input field at the bottom. everything is saved automatically. you can also import/export your list with the settings button ⚙️. have fun!')
+        ),
+    )
+
+}
+
+let b_never_backuped = false;
+if(o_self.o_list.n_ts_ms_last_downloaded_backup == null || o_self.o_list.n_ts_ms_last_downloaded_backup == undefined){
+    b_never_backuped = true;
+    if(!b_new_list){
+        o_self.o_list.n_ts_ms_last_downloaded_backup = new Date().getTime();
+    }
+}
+let n_ms_delta = Math.abs(o_self.n_ms_loaded - o_self.o_list.n_ts_ms_last_downloaded_backup);
+if(n_ms_delta > o_self.n_ms_autodownload_backup_interval || (b_never_backuped && !b_new_list)){
+    let s_message = ''
+    if(b_never_backuped){
+        s_message = 'you never downloaded a backup of this list. it is recommended to download a backup now. do you want to download a backup now? (recommended)';
+    }else{
+        s_message = `the last backup was downloaded on ${new Date(o_self.o_list.n_ts_ms_last_downloaded_backup).toLocaleString()}. it is recommended to download a backup now. do you want to download a backup now? (recommended)`
+    }
+    let b = confirm(s_message);
+    if(b){
+        o_self.f_export_list();
+    }
+    o_self.o_list.n_ts_ms_last_downloaded_backup = new Date().getTime();
+    o_self.f_update_o_list();
+}
+
+document.addEventListener('pointerup', this.f_pointerup);
+          
+    },
+    beforeUnmount() {
+        window.removeEventListener('pointerup', this.f_pointerup);
+    },
+    methods: {
+        f_o_toast: function(s_msg){
+            alert(s_msg)
+        },
+        f_s_dectrypted_from_a_n_u8: f_s_dectrypted_from_a_n_u8,
+    f_s_hashed_sha256: f_s_hashed_sha256,
+    f_a_n_u8_encrypted_from_string: f_a_n_u8_encrypted_from_string,
+    f_o_todoitem: f_o_todoitem,
+    f_b_network_server_connection : async function(){
+        let o_self = this;
+        let n_ms = window.performance.now();
+
+        try {
+            
+            let o_resp = await fetch(
+                '/serverconnectiontest', 
+                {
+                    method: 'GET',
                 }
-                if(o_1.s_text != o_2.s_text){
-                    b_something_changged = true;
-                    break;
-                }
-                if(o_1.s_bg_color != o_2.s_bg_color){
-                    b_something_changged = true;
-                    break;
-                }
-                if(o_1.b_done_final != o_2.b_done_final){
-                    b_something_changged = true;
-                    break;
-                }
-                if(o_1.n_ts_ms_created != o_2.n_ts_ms_created){
-                    b_something_changged = true;
-                    break;
-                }
-                if(o_1.a_n_ts_ms_done.length != o_2.a_n_ts_ms_done.length){
-                    b_something_changged = true;
-                    break;
-                }
+            );
+            if(!o_resp.ok){
+                o_self.f_o_toast('there is no connection to the server!', 'error', 5000)
+            }
+            let o = await o_resp.json();
+
+            if(o?.b_success){
+                // o_self.f_o_toast('success connection server!', 'info', 5000)
+            }
+        } catch (error) {
+            // This will catch network errors like ERR_CONNECTION_REFUSED
+            if (error.message.includes('Failed to fetch') || 
+                error.message.includes('NetworkError') || 
+                error.message.includes('ERR_CONNECTION_REFUSED')) {
+                o_self.f_o_toast('There is no connection to the server!', 'error', 5000);
+            } else {
+                o_self.f_o_toast('An unexpected error occurred!', 'error', 5000);
+                console.error('Connection test error:', error);
             }
         }
-        // console.log({b_something_changged})
-        if(v_o_list != null && b_something_changged){
-            o_state.o_list.s_id = s_id;    
-            o_state.o_list.a_o_todoitem = v_o_list.a_o_todoitem;
+        setTimeout(async ()=>{
+            await o_self.f_b_network_server_connection();
+            
+            // if(s_id){
+            //     let v_o_list = await o_self.f_v_o_list_from_s_id(s_id);
+            //     if(v_o_list != null){
+            //         o_state.o_list.s_id = s_id;    
+            //         o_state.o_list.a_o_todoitem = v_o_list.a_o_todoitem;
+            //     }
+            // }
+
+        }, o_self.n_ms_interval_server_network_connection_test)
+    },
+
+
+       
+        f_test: function(){
+            //always start like this 
+            let o_self = this;
+            // and then use o_self.prop instead of 'o_state.prop'
+            // ...
+        },
+
+
+      
+        f_b_UUIDv4 : function(s_uuid) {
+            return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s_uuid);
+        },
+        f_add_todoitem: function(){
+            let o_self = this;
+            if(o_self.s_text != ''){
+                let o_todoitem = o_self.f_o_todoitem(o_self.s_text);
+                o_todoitem.s_bg_color = o_self.s_bg_color;
+                o_self.o_list.a_o_todoitem.push(
+                    o_todoitem
+                );
+                o_self.s_text = '';
+                o_self.f_update_o_list();
+            }
+        },
+        f_undelete_item: function(o_todoitem){
+            let o_self = this;
+            let o_item = o_self.o_list.a_o_todoitem.find(
+                (o_todoitem2, n_index) => {
+                    return `${o_todoitem2.s_text}${o_todoitem2.n_ts_ms_created}` 
+                        == `${o_todoitem.s_text}${o_todoitem.n_ts_ms_created}`;
+                }
+            )
+            o_item.b_done_final = false;
+            o_self.f_update_o_list();
+        },
+        f_doneundone_todoitem: function(o_todoitem){
+            let o_self = this;
+            let o_item = o_self.o_list.a_o_todoitem.find(
+                (o_todoitem2, n_index) => {
+                    return `${o_todoitem2.s_text}${o_todoitem2.n_ts_ms_created}` 
+                        == `${o_todoitem.s_text}${o_todoitem.n_ts_ms_created}`;
+                }
+            )
+            o_item.a_n_ts_ms_done.push(Date.now());
+            o_self.f_update_o_list();
+        },
+        f_delete_item: function(o_todoitem){
+            let o_self = this;
+            let o_item = o_self.o_list.a_o_todoitem.find(
+                (o_todoitem2, n_index) => {
+                    return `${o_todoitem2.s_text}${o_todoitem2.n_ts_ms_created}` 
+                        == `${o_todoitem.s_text}${o_todoitem.n_ts_ms_created}`;
+                }
+            )
+            o_item.b_done_final = true;
+            let b_done = o_item.a_n_ts_ms_done.length%2 == 1;
+            if(!b_done){
+                o_item.a_n_ts_ms_done.push(Date.now());
+            }
+            o_self.f_update_o_list();
+        },
+        f_delete_list: async function(){
+            let o_self = this;
+            let b = confirm(`do you really want to delete this list? this cannot be undone!`);
+            if(!b){
+                return;
+            }
+
+            o_self.o_list.a_o_todoitem = [];
+            
+            let s_id_hashed = await o_self.f_s_hashed_sha256(o_self.o_list.s_id);
+            let o_resp = await fetch(
+                '/delete', 
+                {
+                    method: 'POST',
+                    body: JSON.stringify(
+                        {s_id_hashed}
+                    )
+                }
+            );
+            console.log(o_resp.json())
+
+        },
+        f_v_o_list_from_s_id : async function(s_id){
+            let o_self = this;
+            let s_id_hashed = await o_self.f_s_hashed_sha256(s_id);
+            let o_resp = await fetch(
+                '/read', 
+                {
+                    method: 'POST',
+                    body: JSON.stringify(
+                        {s_id_hashed}
+                    )
+                }
+            );
+
+            let a_n_u8_encrypted = new Uint8Array(await o_resp.arrayBuffer());
+            if(a_n_u8_encrypted.length == 0){
+                return null;
+            }
+            const s_json_decrypted = await o_self.f_s_dectrypted_from_a_n_u8(new Uint8Array(a_n_u8_encrypted), s_id);
+            let o_data = JSON.parse(s_json_decrypted);
+            return o_data;
+        },
+        f_a_n_u8_payload : async function(
+            o_data,
+            s_id
+        ){
+            let o_self = this;
+            let a_n_u8_encrypted = await o_self.f_a_n_u8_encrypted_from_string(
+                o_data, 
+                s_id // encrypt with the id
+            )
+            const encoder = new TextEncoder();
+            let s_id_hashed = await o_self.f_s_hashed_sha256(s_id); // hash the id
+            const a_n_u8_hashed_id = encoder.encode(s_id_hashed);
+
+            // Create a single ArrayBuffer with:
+            // - 2 bytes for hash length (Uint16)
+            // - N bytes for hash
+            // - Remaining bytes for encrypted data
+            let n_bytes_hash = 2;
+            const buffer = new Uint8Array(n_bytes_hash + a_n_u8_hashed_id.length + a_n_u8_encrypted.length);
+            const view = new DataView(buffer.buffer);
+        
+            // Write hash length (2 bytes)
+            view.setUint16(0, a_n_u8_hashed_id.length);
+        
+            // Write hash bytes
+            buffer.set(a_n_u8_hashed_id, n_bytes_hash);
+        
+            // Write encrypted data
+            buffer.set(a_n_u8_encrypted, n_bytes_hash + a_n_u8_hashed_id.length);
+        
+            return buffer
+        },
+        f_update_o_list : async function(){
+            let o_self = this;
+            // update data structure updates that changes with different git versions
+            for(let o of o_self.o_list.a_o_todoitem){
+                if(!o?.b_done_final){
+                    o.b_done_final = false;
+                }
+                if(!o?.s_uuid){
+                    o.s_uuid = crypto.randomUUID();
+                }
+            }
+            let a_n_u8_payload = await o_self.f_a_n_u8_payload(
+                o_self.o_list,
+                o_self.o_list.s_id
+            )
+            let o_resp = await fetch(
+                '/write', 
+                {
+                    method: 'POST',
+                    'Content-Type': 'application/octet-stream', // Important for binary data
+                    body: a_n_u8_payload
+                }
+            );
+            // f_o_toast('saved', 'success', 5000)
+        },
+
+    f_s_html_text_with_url : function(text, options = {}){
+        // console.log(text)
+        if(!text){
+            return '';
+        }
+        let o_self = this;
+        // return text
+        // const urlRegex = /(?:https?:\/\/)?(?:www\.)?[^\s<>"']+\.[^\s<>"']+/gi;
+        // let urlRegex = /\bhttps?:\/\/[^\s<>"']+/gi;
+        let urlRegex = /\b(?:https?:\/\/[^\s<>"']+|(?:[a-z0-9\-]+\.)+[a-z]{2,}(?::\d+)?(?:\/[^\s<>"']*)?)/gi;
+
+        return text.replace(urlRegex, url => {
+        const href = url.startsWith('http') ? url : 'http://' + url;
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+        });
+    },
+    f_export_list : function(){
+        let o_self = this;
+        // Convert JSON object to a string
+        const jsonStr = JSON.stringify(o_self.o_list, null, 2); // 2-space indentation for readability
+
+        // Create a Blob (file-like object) with the JSON data
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+
+        // Create a temporary URL for the Blob
+        const url = URL.createObjectURL(blob);
+
+        // Create a hidden anchor element and trigger a click
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${window.location.hostname}_${o_self.o_list.s_id.substr(0, 8)}.json`;
+        document.body.appendChild(a);
+        a.click();
+
+        // Clean up
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
+    },
+        f_update_colorpicker: function(s_color){
+            let o_self = this;
+            let o_todoitem = o_self.o_list.a_o_todoitem.find(
+                (o_todoitem2, n_index) => {
+                    return o_todoitem2.s_uuid == o_self.s_uuid_selected;
+                }
+            )
+            if(!o_todoitem){
+                o_self.f_o_toast('could not find item to update color', 'error', 5000);
+                return;
+            }
+            o_todoitem.s_bg_color = s_color;
+
+            o_self.b_show_colorpicker = false;
+            o_self.f_update_o_list();
+        },
+        f_import_list: async function(){
+            let o_self = this;
+            // Create a file input element
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json'; // Accept only JSON files
+
+            // Trigger the file input click
+            input.click();
+
+            // Handle the file selection
+            input.onchange = async (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        try {
+                            const o_list = JSON.parse(e.target.result);
+                            if(!o_self.f_b_UUIDv4(o_list?.s_id)){
+                                alert(`json must have following structure: {s_id: 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx', a_o_todoitem: [${JSON.stringify(o_self.f_o_todoitem('testitem'))}]}`);
+                                throw new Error('s_id is not a valid UUIDv4');
+                            }
+                            let v_o_list = await o_self.f_v_o_list_from_s_id(s_id);
+                            if(v_o_list != null){
+                                let b = confirm(`a list with the id ${s_id} already exists. overwrite existing list?`);
+                                if(!b){
+                                    return;
+                                }
+                            }
+                            o_self.o_list = o_list;
+                            o_self.f_update_o_list();
+                            window.location.hash = `#${o_list.s_id}`;
+                        } catch (error) {
+                            console.error('Error parsing JSON:', error);
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+        }, 
+        f_sort_a_o_todoitem: function(a_o){
+            let o_self = this;
+            return a_o.toSorted((a, b) => {
+                    // Get the last timestamp for each item (determines current status)
+                const aLastTimestamp = a.a_n_ts_ms_done[a.a_n_ts_ms_done.length - 1] || 0;
+                const bLastTimestamp = b.a_n_ts_ms_done[b.a_n_ts_ms_done.length - 1] || 0;
+                
+                // Determine status: even length = done, odd length = undone
+                const aIsDone = a.a_n_ts_ms_done.length % 2 === 0;
+                const bIsDone = b.a_n_ts_ms_done.length % 2 === 0;
+                
+                // First sort by status (UNDONE first, DONE second)
+                if (aIsDone && !bIsDone) return -1;   // a is done, b is undone → b comes first
+                if (!aIsDone && bIsDone) return 1;  // a is undone, b is done → a comes first
+                
+                // If same status, sort by timestamp (newest first)
+                if (aIsDone) {
+                    // Both are done → sort by original completion time (newest done first)
+                    return b.a_n_ts_ms_done[0] - a.a_n_ts_ms_done[0];
+                } else {
+                    // Both are undone → sort by last undone time (newest undone first)
+                    return bLastTimestamp - aLastTimestamp;
+                }
+            })                     
+        },
+        f_filter_a_o_todoitem: function(a_o){
+            let o_self = this;
+            return a_o.filter(
+                o=>{
+                    if(o?.b_done_final && o_self.b_show_deleted === false){
+                        return false;
+                    }
+                    if(o_self.b_show_done){
+                        return true;
+                    }
+                    return o.a_n_ts_ms_done?.at(-1) == null;
+                }
+            )
+        }, 
+
+        f_b_done: function(o){
+            return o.a_n_ts_ms_done.length % 2 === 1
         }
     },
-    o_state.n_ms_interval_list_autofetch
-)
+    computed:{
+          a_o_todoitem_sorted_filtered: function() {
+                let a_o = this.o_list.a_o_todoitem
+                // a_o = this.f_sort_a_o_todoitem(a_o) // keep if you need sorting (objects kept by ref)
+                a_o = this.f_filter_a_o_todoitem(a_o)
+               
+                return a_o
+            },
+        },
+    watch: {
+    },
+  data() {
+    return {
+        a_s_color: ['red', 'green', 'blue', 'yellow', 'purple', 'orange'],
+        n_ms_delta_max_server_network_connection_test: 1000,
+        n_ms_interval_server_network_connection_test: 3333,
+        n_id_interval_server_network_connection_test: null,
+        n_id_interval_list_autofetch: null, 
+        n_ms_interval_list_autofetch: 300,
+        b_show_settings: false,
+        s_text: '',
+        s_bg_color: 'transparent', // default color
+        o_todoitem: null,
+        b_show_colorpicker: false,
+        b_show_deleted: false,
+        b_show_done : true, 
+        n_ms_autodownload_backup_interval: 24 * 60 * 60 * 1000, // every 24 hours
+        n_ms_loaded: new Date().getTime(),
+        s_uuid_selected: null,
+        o_list: {
+            s_id: '',
+            // n_ts_ms_last_downloaded_backup: new Date().getTime(),
+            a_o_todoitem: [
+            ],
+        },        
+        // ...o_state_a_o_toast,
+    };
+  }
+})
+
+// Vue.directive('on-render', {
+//     inserted(el, binding) {
+//       binding.value(el)
+//     }
+//   })
+
+// Handle both mouse and touch events
+
+
+
+app.mount('#app')
+
+globalThis.o_vue = app;
+
 
