@@ -21,6 +21,39 @@ import {
     f_a_n_u8_encrypted_from_string
 } from './functions.module.js'
 
+import {
+    a_o_websocket_function
+} from "./runtimedata.module.js"
+
+const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
+const wsHost = location.host; // includes hostname + port automatically
+const o_ws = new WebSocket(`${wsProtocol}//${wsHost}`);
+globalThis.o_ws = o_ws;
+let f_connect_to_websocket = async function(){
+    return new Promise((resolve, reject) => {
+        o_ws.binaryType = 'arraybuffer'; // set binary type to arraybuffer for receiving binary data
+        o_ws.onopen = () => {
+            console.log("Connected to WebSocket server");
+            resolve();
+        };
+        o_ws.onerror = (error) => {
+            console.error("WebSocket error:", error);
+            reject(error);
+        };
+    });
+};
+
+
+// triggered when the connection closes
+o_ws.addEventListener("close", () => {
+  console.log("Disconnected from server");
+});
+
+// optional: handle errors
+o_ws.addEventListener("error", (err) => {
+  console.error("WebSocket error:", err);
+});
+await f_connect_to_websocket();
 
 // import { Boolean } from '/three.js-r126/examples/jsm/math/BooleanOperation.js';
 // import { STLExporter } from '/three/STLExporter.js';
@@ -397,78 +430,134 @@ const app = createApp({
             let s_id = window.location.hash.replace('#', '');
 
             if(s_id != ``){
-    b_new_list = false;
-    let v_o_list = await o_self.f_v_o_list_from_s_id(s_id);
-    if(v_o_list != null){
-        o_self.o_list.s_id = s_id;   
-        o_self.o_list.a_o_todoitem = reactive(v_o_list.a_o_todoitem);
-        o_self.o_list.n_ts_ms_last_downloaded_backup = v_o_list.n_ts_ms_last_downloaded_backup;
-    }else{
-        b_new_list = true;
-    }
+                o_self.f_set_websocket_uuid(s_id);
+                b_new_list = false;
+                // let v_o_list = await o_self.f_v_o_list_from_s_id(s_id);
+                // if(v_o_list != null){
+                //     o_self.o_list.s_id = s_id;   
+                //     o_self.o_list.a_o_todoitem = reactive(v_o_list.a_o_todoitem);
+                //     o_self.o_list.n_ts_ms_last_downloaded_backup = v_o_list.n_ts_ms_last_downloaded_backup;
+                // }else{
+                //     b_new_list = true;
+            //}
 
-    document.addEventListener('keydown', (event) => {
-            
-        if (event.key === 'Escape') {
-            if(o_self.b_show_colorpicker){
-                o_self.b_show_colorpicker = false;
+                document.addEventListener('keydown', (event) => {
+                        
+                    if (event.key === 'Escape') {
+                        if(o_self.b_show_colorpicker){
+                            o_self.b_show_colorpicker = false;
+                        }
+                    }
+
+                    
+                });
+
+
+                o_self.n_id_interval_list_autofetch = setInterval(
+                    o_self.f_interval_fetch_list,
+                    o_self.n_ms_interval_list_autofetch
+                )
+
+
+
             }
+
+        if(b_new_list){
+            o_self.o_list.s_id = crypto.randomUUID();
+            window.location.hash = o_self.o_list.s_id;
+            await o_self.f_set_websocket_uuid(o_self.o_list.s_id);
+            o_self.o_list.a_o_todoitem.push(
+                reactive(
+                    f_o_todoitem('this is your first todo item. click the square to mark it as done. click the trash can to delete it. click the color button to change its color. add more items with the input field at the bottom. everything is saved automatically. you can also import/export your list with the settings button ⚙️. have fun!')
+                ),
+            )
+            await o_self.f_update_o_list();
         }
-
         
-    });
+
+        // triggered when a message is received from the server
+        o_ws.addEventListener("message",async (o_e) => {
+
+            let a_n_u8_payload = new Uint8Array(o_e.data);
+
+            let n_id_websocket_function = a_n_u8_payload[0];
+            let a_n_u8_data = a_n_u8_payload.slice(1);
+            let o_websocket_function = a_o_websocket_function.find(o=>{
+                return o.n_id == n_id_websocket_function
+            });
+            if(!o_websocket_function){
+                console.error('could not find function with id '+n_id_websocket_function);
+                return;
+            }
+            if(o_websocket_function.s_name == 'update_o_list'){
+      
+                let o_self = globalThis.o_self;
+                let a_n_u8_encrypted = a_n_u8_payload.slice(1);
+                const s_json_decrypted = await o_self.f_s_dectrypted_from_a_n_u8(new Uint8Array(a_n_u8_encrypted), o_self.o_list.s_id);
+                let o_data = JSON.parse(s_json_decrypted);
+                if(o_data?.o_list){
+                    o_self.o_list.a_o_todoitem = o_data.o_list.a_o_todoitem;
+                    o_self.o_list.n_ts_ms_last_downloaded_backup = o_data.o_list.n_ts_ms_last_downloaded_backup;
+                }else{
+                    console.error('could not find o_list in data from server');
+                }
+            
+            }
+            if(o_websocket_function.s_name == 'payload_is_a_n_u8_encrypted_o_list'){
+                let a_n_u8_encrypted = a_n_u8_data;
+
+                if(a_n_u8_encrypted.length == 0){
+                    return null;
+                }
+                const s_json_decrypted = await o_self.f_s_dectrypted_from_a_n_u8(new Uint8Array(a_n_u8_encrypted), s_id);
+                let o_data = JSON.parse(s_json_decrypted);
+                o_self.o_list = o_data.o_list;
+                
+                return o_data;
+
+            }
+
+        });
 
 
-o_self.n_id_interval_list_autofetch = setInterval(
-    o_self.f_interval_fetch_list,
-    o_self.n_ms_interval_list_autofetch
-)
 
 
 
-}
-
-if(b_new_list){
-    o_self.o_list.s_id = crypto.randomUUID();
-    window.location.hash = o_self.o_list.s_id;
-    o_self.o_list.a_o_todoitem.push(
-        reactive(
-            f_o_todoitem('this is your first todo item. click the square to mark it as done. click the trash can to delete it. click the color button to change its color. add more items with the input field at the bottom. everything is saved automatically. you can also import/export your list with the settings button ⚙️. have fun!')
-        ),
-    )
-
-}
-
-let b_never_backuped = false;
-if(o_self.o_list.n_ts_ms_last_downloaded_backup == null || o_self.o_list.n_ts_ms_last_downloaded_backup == undefined){
-    b_never_backuped = true;
-    if(!b_new_list){
-        o_self.o_list.n_ts_ms_last_downloaded_backup = new Date().getTime();
-    }
-}
-let n_ms_delta = Math.abs(o_self.n_ms_loaded - o_self.o_list.n_ts_ms_last_downloaded_backup);
-if(n_ms_delta > o_self.n_ms_autodownload_backup_interval || (b_never_backuped && !b_new_list)){
-    let s_message = ''
-    if(b_never_backuped){
-        s_message = 'you never downloaded a backup of this list. it is recommended to download a backup now. do you want to download a backup now? (recommended)';
-    }else{
-        s_message = `the last backup was downloaded on ${new Date(o_self.o_list.n_ts_ms_last_downloaded_backup).toLocaleString()}. it is recommended to download a backup now. do you want to download a backup now? (recommended)`
-    }
-    let b = confirm(s_message);
-    if(b){
-        o_self.f_export_list();
-    }
-    o_self.o_list.n_ts_ms_last_downloaded_backup = new Date().getTime();
-    o_self.f_update_o_list();
-}
-
-document.addEventListener('pointerup', this.f_pointerup);
+        document.addEventListener('pointerup', this.f_pointerup);
           
     },
     beforeUnmount() {
         window.removeEventListener('pointerup', this.f_pointerup);
     },
     methods: {
+        f_set_websocket_uuid: async function(s_uuid){
+
+            let o_self = this;
+            let s_websocket_function = 'set_uuid_hashed';
+            
+            let a_n_u8_payload = new Uint8Array();
+
+            let o_websocket_function = a_o_websocket_function.find(o=>{
+                return o.s_name == s_websocket_function
+            });
+            if(!o_websocket_function){
+                alert("could not find function "+s_websocket_function);
+            };
+            let s_uuid_hashed = await o_self.f_s_hashed_sha256(s_uuid);
+            let o_text_encoder = new TextEncoder();
+            // the payload always starts with the function id
+            // after that the data (can be dynamic in this case it is the string of the hashed uuid) follows
+            a_n_u8_payload = new Uint8Array([
+                o_websocket_function.n_id,
+                ...o_text_encoder.encode(s_uuid_hashed)
+                
+            ]);
+
+            o_ws.send(
+                a_n_u8_payload
+            )
+
+        },
         f_interval_fetch_list: async function(){
             let o_self = this;
             if(o_self.b_writing){
@@ -482,53 +571,53 @@ document.addEventListener('pointerup', this.f_pointerup);
             alert(s_msg)
         },
         f_s_dectrypted_from_a_n_u8: f_s_dectrypted_from_a_n_u8,
-    f_s_hashed_sha256: f_s_hashed_sha256,
-    f_a_n_u8_encrypted_from_string: f_a_n_u8_encrypted_from_string,
-    f_o_todoitem: f_o_todoitem,
-    f_b_network_server_connection : async function(){
-        let o_self = this;
-        let n_ms = window.performance.now();
+        f_s_hashed_sha256: f_s_hashed_sha256,
+        f_a_n_u8_encrypted_from_string: f_a_n_u8_encrypted_from_string,
+        f_o_todoitem: f_o_todoitem,
+        f_b_network_server_connection : async function(){
+            let o_self = this;
+            let n_ms = window.performance.now();
 
-        try {
-            
-            let o_resp = await fetch(
-                '/serverconnectiontest', 
-                {
-                    method: 'GET',
+            try {
+                
+                let o_resp = await fetch(
+                    '/serverconnectiontest', 
+                    {
+                        method: 'GET',
+                    }
+                );
+                if(!o_resp.ok){
+                    o_self.f_o_toast('there is no connection to the server!', 'error', 5000)
                 }
-            );
-            if(!o_resp.ok){
-                o_self.f_o_toast('there is no connection to the server!', 'error', 5000)
-            }
-            let o = await o_resp.json();
+                let o = await o_resp.json();
 
-            if(o?.b_success){
-                // o_self.f_o_toast('success connection server!', 'info', 5000)
+                if(o?.b_success){
+                    // o_self.f_o_toast('success connection server!', 'info', 5000)
+                }
+            } catch (error) {
+                // This will catch network errors like ERR_CONNECTION_REFUSED
+                if (error.message.includes('Failed to fetch') || 
+                    error.message.includes('NetworkError') || 
+                    error.message.includes('ERR_CONNECTION_REFUSED')) {
+                    o_self.f_o_toast('There is no connection to the server!', 'error', 5000);
+                } else {
+                    o_self.f_o_toast('An unexpected error occurred!', 'error', 5000);
+                    console.error('Connection test error:', error);
+                }
             }
-        } catch (error) {
-            // This will catch network errors like ERR_CONNECTION_REFUSED
-            if (error.message.includes('Failed to fetch') || 
-                error.message.includes('NetworkError') || 
-                error.message.includes('ERR_CONNECTION_REFUSED')) {
-                o_self.f_o_toast('There is no connection to the server!', 'error', 5000);
-            } else {
-                o_self.f_o_toast('An unexpected error occurred!', 'error', 5000);
-                console.error('Connection test error:', error);
-            }
-        }
-        setTimeout(async ()=>{
-            await o_self.f_b_network_server_connection();
-            
-            // if(s_id){
-            //     let v_o_list = await o_self.f_v_o_list_from_s_id(s_id);
-            //     if(v_o_list != null){
-            //         o_state.o_list.s_id = s_id;    
-            //         o_state.o_list.a_o_todoitem = v_o_list.a_o_todoitem;
-            //     }
-            // }
+            setTimeout(async ()=>{
+                await o_self.f_b_network_server_connection();
+                
+                // if(s_id){
+                //     let v_o_list = await o_self.f_v_o_list_from_s_id(s_id);
+                //     if(v_o_list != null){
+                //         o_state.o_list.s_id = s_id;    
+                //         o_state.o_list.a_o_todoitem = v_o_list.a_o_todoitem;
+                //     }
+                // }
 
-        }, o_self.n_ms_interval_server_network_connection_test)
-    },
+            }, o_self.n_ms_interval_server_network_connection_test)
+        },
 
 
        
@@ -640,10 +729,12 @@ document.addEventListener('pointerup', this.f_pointerup);
             o_data,
             s_id
         ){
+          
+
             let o_self = this;
             let a_n_u8_encrypted = await o_self.f_a_n_u8_encrypted_from_string(
                 o_data, 
-                s_id // encrypt with the id
+                s_id 
             )
             const encoder = new TextEncoder();
             let s_id_hashed = await o_self.f_s_hashed_sha256(s_id); // hash the id
@@ -668,6 +759,45 @@ document.addEventListener('pointerup', this.f_pointerup);
         
             return buffer
         },
+        // f_backup_list: async function(){
+        //     let b_never_backuped = false;
+        //     if(o_self.o_list.n_ts_ms_last_downloaded_backup == null || o_self.o_list.n_ts_ms_last_downloaded_backup == undefined){
+        //         b_never_backuped = true;
+        //         if(!b_new_list){
+        //             o_self.o_list.n_ts_ms_last_downloaded_backup = new Date().getTime();
+        //         }
+        //     }
+        //     let n_ms_delta = Math.abs(o_self.n_ms_loaded - o_self.o_list.n_ts_ms_last_downloaded_backup);
+        //     if(n_ms_delta > o_self.n_ms_autodownload_backup_interval || (b_never_backuped && !b_new_list)){
+        //         let s_message = ''
+        //         if(b_never_backuped){
+        //             s_message = 'you never downloaded a backup of this list. it is recommended to download a backup now. do you want to download a backup now? (recommended)';
+        //         }else{
+        //             s_message = `the last backup was downloaded on ${new Date(o_self.o_list.n_ts_ms_last_downloaded_backup).toLocaleString()}. it is recommended to download a backup now. do you want to download a backup now? (recommended)`
+        //         }
+        //         let b = confirm(s_message);
+        //         if(b){
+        //             o_self.f_export_list();
+        //         }
+        //         o_self.o_list.n_ts_ms_last_downloaded_backup = new Date().getTime();
+        //         o_self.f_update_o_list();
+
+        //     }
+        // },
+        f_read_o_list: async function(){
+            debugger
+            let o_self = this; 
+            let s_uuid_hashed = await o_self.f_s_hashed_sha256(o_self.o_list.s_id);
+            let o_websocket_function = a_o_websocket_function.find(o=>{
+                return o.s_name == 'f_read_o_list'
+            });
+            let a_n_u8_payload = await o_self.f_a_n_u8_payload(
+                o_websocket_function?.n_id,
+                s_uuid_hashed
+            );
+            o_ws.send(a_n_u8_payload); 
+            await o_self.f_backup_list();
+        },
         f_update_o_list : async function(){
 
             let o_self = this;
@@ -681,18 +811,59 @@ document.addEventListener('pointerup', this.f_pointerup);
                     o.s_uuid = crypto.randomUUID();
                 }
             }
-            let a_n_u8_payload = await o_self.f_a_n_u8_payload(
-                o_self.o_list,
-                o_self.o_list.s_id
+            let s_websocket_function = 'update_o_list';
+            let n_id_websocket_function = a_o_websocket_function.find(o=>{
+                return o.s_name == s_websocket_function
+            });
+            if(!n_id_websocket_function){
+                alert("could not find function "+s_websocket_function);
+            };
+            let o_data = {
+                n_id_websocket_function, 
+                o_list: o_self.o_list
+            }
+
+            let a_n_u8_encrypted = await o_self.f_a_n_u8_encrypted_from_string(
+                o_data, 
+                o_self.o_list.s_id 
             )
-            let o_resp = await fetch(
-                '/write', 
-                {
-                    method: 'POST',
-                    'Content-Type': 'application/octet-stream', // Important for binary data
-                    body: a_n_u8_payload
-                }
-            );
+            const encoder = new TextEncoder();
+            let s_id_hashed = await o_self.f_s_hashed_sha256(o_self.o_list.s_id); // hash the id
+            const a_n_u8_hashed_id = encoder.encode(s_id_hashed);
+
+            // Create a single ArrayBuffer with:
+            // - 2 bytes for hash length (Uint16)
+            // - N bytes for hash
+            // - Remaining bytes for encrypted data
+            let n_bytes_hash = 2;
+            const buffer = new Uint8Array(n_bytes_hash + a_n_u8_hashed_id.length + a_n_u8_encrypted.length);
+            const view = new DataView(buffer.buffer);
+        
+            // Write hash length (2 bytes)
+            view.setUint16(0, a_n_u8_hashed_id.length);
+        
+            // Write hash bytes
+            buffer.set(a_n_u8_hashed_id, n_bytes_hash);
+        
+            // Write encrypted data
+            buffer.set(a_n_u8_encrypted, n_bytes_hash + a_n_u8_hashed_id.length);
+        
+            let a_n_u8_payload = new Uint8Array([
+                n_id_websocket_function.n_id,
+                ...buffer
+            ]);
+
+            o_ws.send(
+                a_n_u8_payload
+            )
+            // let o_resp = await fetch(
+            //     '/write', 
+            //     {
+            //         method: 'POST',
+            //         'Content-Type': 'application/octet-stream', // Important for binary data
+            //         body: a_n_u8_payload
+            //     }
+            // );
 
             o_self.b_writing = false;
             // f_o_toast('saved', 'success', 5000)
@@ -856,7 +1027,7 @@ document.addEventListener('pointerup', this.f_pointerup);
         n_ms_interval_server_network_connection_test: 3333,
         n_id_interval_server_network_connection_test: null,
         n_id_interval_list_autofetch: null, 
-        n_ms_interval_list_autofetch: 500,
+        n_ms_interval_list_autofetch: 100000,
         b_show_settings: false,
         s_text: '',
         s_bg_color: 'transparent', // default color
@@ -889,8 +1060,11 @@ document.addEventListener('pointerup', this.f_pointerup);
 
 
 
+
 app.mount('#app')
 
 globalThis.o_vue = app;
+
+
 
 

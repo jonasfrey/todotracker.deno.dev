@@ -15,6 +15,15 @@
 //     f_n_sum
 // }
 
+
+// let f_o_websocket_function_from_s_name = function(s_name, a_o_websocket_function){
+//   let o_websocket_function = a_o_websocket_function.find(o=>o.s_name == s_name);
+//   if(!o_websocket_function){
+//     throw new Error(`no websocket function with name '${s_name}' found`);
+//   }
+//   return o_websocket_function;
+// }
+
  // Convert UUID string to ArrayBuffer
         let uuidToArrayBuffer = function(uuid) {
             // Remove hyphens and convert to hex string
@@ -46,8 +55,12 @@ let f_s_hashed_sha256 = async function (s) {
 
 
 // Encrypt JSON data
-let f_a_n_u8_encrypted_from_string = async function(jsonData, uuid) {
+let f_a_n_u8_encrypted_from_string = async function(
+  jsonData,
+  uuid, 
+) {
     try {
+      
         // Convert UUID to key material
         const keyMaterial = await crypto.subtle.importKey(
             'raw',
@@ -214,5 +227,6 @@ export {
     f_s_hashed_sha256,
     f_a_n_u8_encrypted_from_string,
     f_s_dectrypted_from_a_n_u8,
-    f_o_todoitem
+    f_o_todoitem, 
+    
 }
