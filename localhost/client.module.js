@@ -453,10 +453,10 @@ const app = createApp({
                 });
 
 
-                o_self.n_id_interval_list_autofetch = setInterval(
-                    o_self.f_interval_fetch_list,
-                    o_self.n_ms_interval_list_autofetch
-                )
+                // o_self.n_id_interval_list_autofetch = setInterval(
+                //     o_self.f_interval_fetch_list,
+                //     o_self.n_ms_interval_list_autofetch
+                // )
 
 
 
