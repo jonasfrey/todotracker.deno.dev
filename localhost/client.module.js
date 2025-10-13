@@ -511,7 +511,7 @@ const app = createApp({
                 }
                 const s_json_decrypted = await o_self.f_s_dectrypted_from_a_n_u8(new Uint8Array(a_n_u8_encrypted), s_id);
                 let o_data = JSON.parse(s_json_decrypted);
-                o_self.o_list = o_data.o_list;
+                o_self.o_list = o_data;
                 
                 return o_data;
 
@@ -812,16 +812,13 @@ const app = createApp({
                 }
             }
             let s_websocket_function = 'update_o_list';
-            let n_id_websocket_function = a_o_websocket_function.find(o=>{
+            let o_websocket_function = a_o_websocket_function.find(o=>{
                 return o.s_name == s_websocket_function
             });
-            if(!n_id_websocket_function){
+            if(!o_websocket_function){
                 alert("could not find function "+s_websocket_function);
             };
-            let o_data = {
-                n_id_websocket_function, 
-                o_list: o_self.o_list
-            }
+            let o_data = o_self.o_list;
 
             let a_n_u8_encrypted = await o_self.f_a_n_u8_encrypted_from_string(
                 o_data, 
@@ -849,7 +846,7 @@ const app = createApp({
             buffer.set(a_n_u8_encrypted, n_bytes_hash + a_n_u8_hashed_id.length);
         
             let a_n_u8_payload = new Uint8Array([
-                n_id_websocket_function.n_id,
+                o_websocket_function.n_id,
                 ...buffer
             ]);
 
